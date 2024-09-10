@@ -26,9 +26,11 @@ async function getGoLangProjects(browser, url) {
   //
   const title = await page.waitForSelector("h1")
     .then(h1 => page.evaluate(e => e.textContent, h1));
-  let descrip = await page.$$eval("body > div", e => e.textContent);
-
-  console.log(typeof(descrip))
+  let descrip = await page.locator('xpath/html/body/div/div[1]/div[1]')
+      .waitHandle()
+      .then(div =>
+        page.evaluate(e => e.textContent, div));
+    
 
   return {title, descrip, url, tags}
 }
@@ -57,7 +59,7 @@ async function getIndeed(broswer, url) {
 
 var links = JSON.parse(fs.readFileSync(linksFile, 'utf8'));
 const browser = await puppeteer.launch({headless: false});
-const results = await Promise.all(links.slice(0, 1).map(link => getData(browser, link)));
+const results = await Promise.all(links.slice(0).map(link => getData(browser, link)));
 
 for (let result of results) {
   let {title, descrip, url} = result;
