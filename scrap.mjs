@@ -9,7 +9,7 @@ const tags = process.argv.slice(3) || [];
 async function getData(broser, url) {
   if (linksFile.includes("rustjobs"))
     return getDataRustjobs(browser, url);
-  else if (linksFile.includes("indeed_rust"))
+  else if (linksFile.includes("indeed"))
     return getIndeed(browser, url);
   else if (linksFile.includes("golangprojects"))
     return getGoLangProjects(browser, url);
@@ -50,16 +50,19 @@ async function getIndeed(broswer, url) {
   const page = await browser.newPage();
   await page.setViewport({width: 1080, height: 1024});
   await page.goto(url);
-  // .jobsearch-JobInfoHeader-title
-// Array.from(document.querySelector("#jobDescriptionText").querySelectorAll("p")).map(p => p.textContent).join("\n")
   const title = await page.waitForSelector(".jobsearch-JobInfoHeader-title").then(h1 => page.evaluate(e => e.textContent, h1));
-  const descrip = await page.$$eval("#jobDescriptionText p", elements => elements.map(x => x.textContent).join("\n"))
+  let descrip = await page.$$eval("#jobDescriptionText p", elements => elements.map(x => x.textContent).join("\n"))
+
+  if (!descrip) {
+    descrip = await page.$$eval(".jobsearch-BodyContainer", elements =>
+      elements.map(x => x.textContent).join("\n"))
+  }
   return {title, descrip, url, tags}
 }
 
 var links = JSON.parse(fs.readFileSync(linksFile, 'utf8'));
 const browser = await puppeteer.launch({headless: false});
-const results = await Promise.all(links.slice(0).map(link => getData(browser, link)));
+const results = await Promise.all(links.slice(50).map(link => getData(browser, link)));
 
 for (let result of results) {
   let {title, descrip, url} = result;
