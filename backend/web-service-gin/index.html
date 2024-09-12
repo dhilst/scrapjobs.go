@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>scrapjobs</title>
+    <style>
+      .tag {
+          border-radius: 4px;
+          background-color: #ddd4ed;
+          padding: 3px 11px;
+          margin: 3px;
+        }
+    </style>
+  </head>
+  <body>
+    <h1>scrapjobs</h1>
+
+    <form onsubmit="return false;">
+      <input type="text" id="message" autocomplete="off" placeholder="Search a job" onkeyup="searchKeyPress(event)" onkeypress="searchKeyPressDown(event)">
+      <button onclick="sendMessage()">Send</button>
+    </form>
+    <hr>
+    <div id="output"></div>
+
+    <script>
+    let secure = window.location.protocol.includes('https') ? 's':'';
+    var socket = new WebSocket("ws"+secure+"://" +
+      window.location.host + "/ws/server");
+
+    socket.onopen = function(event) {
+      console.log("WebSocket connected!");
+    }
+
+    socket.onmessage = function(event) {
+      const results = JSON.parse(event.data);
+      if (results === null) {
+        document.getElementById("output").innerhtml = `<em>No data!</em>`;
+        return;
+      };
+      console.assert(Array.isArray(results));
+
+      const tag = tag => `<span class="tag">${tag}</span>`;
+      console.log("tags", results[0].Tags);
+
+      // Title Tags Url Rank Headline 
+      const lis = results.map(result =>
+        `<li>
+          <a href="${result.Url}">${result.Title}</a>
+          ${result.Tags.map(tag).join("")}
+          <pre>${result.Headline}</pre>
+        </li>`)
+        .join();
+      document.getElementById("output").innerHTML = `<em>Total</em>: ${results.length}<ul>${lis}</ul>`;
+    }
+
+    function throttle(delay, func) {
+      let timeout = null;
+
+      return arg => {
+        if (!timeout) {
+          func(arg);
+          timeout=setTimeout(() => { timeout = null }, delay)
+        }
+      };
+    }
+
+    const sendKeyPress = throttle(100, Query => {
+      console.log(`>> Sending ${Query}`)
+     socket.send(JSON.stringify({ Query }))
+    });
+
+    function searchKeyPress(e) {
+      console.log(`> Sending ${e.target.value}`)
+      sendKeyPress(e.target.value);
+    }
+
+    function searchKeyPressDown(e) {
+      if (e.keyIdentifier=='U+000A' ||
+          e.keyIdentifier=='Enter' ||
+          e.keyCode==13) {
+        e.preventDefault();
+        return false;
+      }
+
+      return true;
+    }
+
+    function sendMessage() {
+      var message = document.getElementById("message").value;
+      socket.send(JSON.stringify({ Query: message }));
+      document.getElementById("message").value = "";
+    }
+    </script>
+  </body>
+</html>
