@@ -2,21 +2,72 @@
 <html>
   <head>
     <title>scrapjobs</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap" rel="stylesheet">
     <style>
+      .title {
+        color: #00dd00;
+        text-align: center;
+        text-shadow: 0px 2px 8px #ff00ff;
+      }
+
+      .kanit-light-italic {
+        font-family: "Kanit", sans-serif;
+        font-weight: 300;
+        font-style: italic;
+      }
+
+      .kanit-extrabold {
+        font-family: "Kanit", sans-serif;
+        font-weight: 800;
+        font-style: normal;
+      }
+
+      form {
+        display: flex;
+        justify-content: center;
+      }
+
+      .search {
+        width: 80%;
+        box-shadow: 0 0 10px #14ff00;
+        background-color: transparent;
+        border: 0;
+        color: white;
+        border-radius: 8px;
+        padding: 5px;
+      }
+
       .tag {
-          border-radius: 4px;
-          background-color: #ddd4ed;
-          padding: 3px 11px;
-          margin: 3px;
-        }
+        border-radius: 4px;
+        color: #000;
+        background-color: #ddd4ed;
+        padding: 3px 11px;
+        margin: 3px;
+      }
+
+      a {
+        color: #fff;
+        text-shadow: 0px 2px 8px #00cc00;
+      }
+
+      a:visited {
+        color: #aa00aa;
+        text-decoration: none;
+      }
+
+      body {
+        background-color: black;
+        color: white;
+      }
     </style>
   </head>
   <body>
-    <h1>scrapjobs</h1>
-
+    <h1 class="title kanit-light-italic">scrapjobs</h1>
     <form onsubmit="return false;">
-      <input type="text" id="message" autocomplete="off" placeholder="Search a job" onkeyup="searchKeyPress(event)" onkeypress="searchKeyPressDown(event)">
-      <button onclick="sendMessage()">Send</button>
+      <input type="text" class="search" id="message" autocomplete="off" placeholder="Search a job" onkeyup="searchKeyPress(event)" onkeypress="searchKeyPressDown(event)">
+      <!--<button onclick="sendMessage()">Send</button>-->
     </form>
     <hr>
     <div id="output"></div>
@@ -44,11 +95,11 @@
       // Title Tags Url Rank Headline 
       const lis = results.map(result =>
         `<li>
-          <a href="${result.Url}">${result.Title}</a>
+          <a href="${result.Url}" target="_blank" class="kanit-extrabold">${result.Title}</a>
           ${result.Tags.map(tag).join("")}
           <pre>${result.Headline}</pre>
         </li>`)
-        .join();
+        .join("");
       document.getElementById("output").innerHTML = `<em>Total</em>: ${results.length}<ul>${lis}</ul>`;
     }
 
