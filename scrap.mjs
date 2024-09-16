@@ -1,4 +1,4 @@
-import fs from 'fs';
+import { promises as fs } from 'fs';
 import puppeteer from 'puppeteer';
 // Or import puppeteer from 'puppeteer-core';
 
@@ -14,30 +14,31 @@ const command = process.argv[2]; // "downloadJobs" "getLinks"
     await getLinksCommand();
     break;
   default: 
-    throw "Invalid command"
+    console.error(`ERROR: Invalid command ${command}, expecting downloadJobs, getLinks`);
+    process.exit(-1);
     break;
   }
 })()
 
 async function downloadJobsCommand() {
-  const linksFile = process.argv[3];
-  const data = fs.readFileSync(linksFile);
-  var links = JSON.parse(data);
-  const browser = await puppeteer.launch({headless: false});
-  const results = await Promise.all(links.slice(0).map(link => getData(browser, link)));
-
-  for (let result of results) {
-    let {title, descrip, url} = result;
-    title = title.replaceAll(/[ \/]/g, "_");
-    const path = `./output/${title}.json`;
-
-    fs.writeFileSync(path, JSON.stringify(result, null, 2));
-    console.log(`${path} written`);
-  }
-
   try {
+    const data = await fs.readFile('/dev/stdin');
+    var links = JSON.parse(data);
+    const browser = await puppeteer.launch({headless: false});
+    const results = await Promise.all(links.slice(0).map(link => getData(browser, link)));
+
+    for (let result of results) {
+      let {title, descrip, url} = result;
+      title = title.replaceAll(/[ \/]/g, "_");
+      const path = `./output/${title}.json`;
+
+      await fs.writeFile(path, JSON.stringify(result, null, 2));
+      console.log(`${path} written`);
+    }
+
     await browser.close()
   } catch (e) {
+    console.error("ERROR", e)
   }
 }
 
@@ -58,6 +59,9 @@ async function getLinksCommand() {
   await browser.close()
 }
 
+/**
+ * Get links scrappers
+ */
 async function getLinksGeneric(url, linksFilter, browser) {
   const page = await browser.newPage();
   await page.setViewport({width: 1080, height: 1024});
@@ -68,6 +72,9 @@ async function getLinksGeneric(url, linksFilter, browser) {
   return links
 }
 
+/**
+ * Donwload data scrappers
+ */
 async function getLinksGolangprojects(browser) {
   const url = "https://www.golangprojects.com/golang-remote-jobs.html";
   const linksFilter = "https://www.golangprojects.com/golang-go-job";
@@ -85,7 +92,7 @@ async function getLinksRustjobs(browser) {
 async function getData(browser, url) {
   const linksFile = process.argv[3];
   if (linksFile.includes("rustjobs"))
-    return getDataRustjobs(browser, url);
+    return getRustjobs(browser, url);
   else if (linksFile.includes("indeed"))
     return getIndeed(browser, url);
   else if (linksFile.includes("golangprojects"))
@@ -114,7 +121,7 @@ async function getGoLangProjects(browser, url) {
   return {title, descrip, url, tags}
 }
 
-async function getDataRustjobs(browser, url) {
+async function getRustjobs(browser, url) {
   const tags = process.argv.slice(4) || [];
   // Navigate the page to a URL.
   const page = await browser.newPage();
