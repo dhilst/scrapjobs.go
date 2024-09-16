@@ -1,4 +1,5 @@
 import { promises as fs } from 'fs';
+import path from 'path';
 import puppeteer from 'puppeteer';
 // Or import puppeteer from 'puppeteer-core';
 
@@ -26,17 +27,19 @@ async function downloadJobsCommand() {
     var links = JSON.parse(data);
     const browser = await puppeteer.launch({headless: false});
     const results = await Promise.all(links.slice(0).map(link => getData(browser, link)));
+    let outputs = [];
 
     for (let result of results) {
       let {title, descrip, url} = result;
       title = title.replaceAll(/[ \/]/g, "_");
-      const path = `./output/${title}.json`;
-
-      await fs.writeFile(path, JSON.stringify(result, null, 2));
-      console.log(`${path} written`);
+      const jsonPath = path.resolve(`./output/${title}.json`);
+      await fs.writeFile(jsonPath, JSON.stringify(result, null, 2));
+      outputs.push(jsonPath)
     }
 
     await browser.close()
+
+    console.log(JSON.stringify(outputs, null, 2));
   } catch (e) {
     console.error("ERROR", e)
   }

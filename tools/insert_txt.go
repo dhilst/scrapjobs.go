@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"flag"
@@ -8,7 +9,6 @@ import (
 	"io"
 	"log"
 	"os"
-	"path/filepath"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -40,19 +40,26 @@ func main() {
 	err = conn.QueryRow(context.Background(),
 		"select version()").Scan(&version)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "QueryRow failed: %v\n", err)
-		os.Exit(1)
+		log.Fatalf("QueryRow failed: %v\n", err)
 	}
 	fmt.Printf("Version: %s\n", version)
 	defer conn.Close(context.Background())
 
-	var matches []string
-	if matches, err = filepath.Glob("../output/*.json"); err != nil {
+	// Remove the *new* tag from the jobs in the database
+	_, err = conn.Exec(context.Background(), "update jobs set tags = array_remove(tags, 'new')")
+
+	reader := bufio.NewReader(os.Stdin)
+	bytes, err := io.ReadAll(reader)
+	if err != nil {
 		panic(err)
 	}
-	for _, val := range matches {
+	var jsonFiles []string
+	json.Unmarshal(bytes, &jsonFiles)
+
+	for _, val := range jsonFiles {
 		jsonFile, err := os.Open(val)
 		if err != nil {
+			log.Printf("JSON file error: %s: '%s'\n", err, val)
 			continue
 		}
 		defer jsonFile.Close()
@@ -68,17 +75,15 @@ func main() {
 		var data Jobs
 		json.Unmarshal(bytes, &data)
 
+		// Append the *new* tag for the new imported data
+		var tags = append(data.Tags, "new")
+
 		conn.Exec(context.Background(),
-			"INSERT INTO jobs (title, descrip, url, tags) VALUES($1, $2, $3, $4)",
-			data.Title, data.Descrip, data.Url, data.Tags)
+			"INSERT INTO jobs (title, descrip, url, tags) VALUES($1, $2, $3, $4) ON CONFLICT (url) DO NOTHING",
+			data.Title, data.Descrip, data.Url, tags)
 
 		fmt.Println(data.Title, "inserted")
 	}
 
 	os.Exit(0)
-
-	// cleanup the jobs table
-	//conn.Exec(context.Background(),
-	//	"truncate jobs")
-
 }
