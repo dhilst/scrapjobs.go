@@ -50,6 +50,7 @@
         display: inline-block;
       }
 
+
       a {
         color: #fff;
         //text-shadow: 0px 2px 8px #00cc00;
@@ -57,7 +58,6 @@
 
       a:visited {
         color: #544454;
-        text-decoration: none;
       }
 
       body {
@@ -65,6 +65,13 @@
         color: white;
         font-family: "kanit", sans-serif;
         font-weight: 300;
+      }
+
+      #output b {
+        font-family: "kanit", sans-serif;
+        font-weight: 500;
+        font-style: italic;
+        text-shadow: 0px 2px 6px #ff00ff;
       }
     </style>
   </head>
@@ -161,7 +168,13 @@
           <pre>${result.Headline}</pre>
         </li>`
       })).then(x => x.join(""));
-      document.getElementById("output").innerHTML = `<em>Total</em>: ${results.length}<ul>${lis}</ul>`;
+      const element = document.createElement("div");
+      element.innerHTML = `<em>Total</em>: ${results.length}<ul>${lis}</ul>`;
+      element.style.display = 'none';
+      document.getElementById("output").replaceChildren(element);
+      // This is to fix a flickering of the a:visited style blinking
+      // after each search.
+      setTimeout(() => element.style.display = 'block', 50);
     }
 
     function throttle(delay, func) {
