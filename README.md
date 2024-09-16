@@ -4,8 +4,10 @@ This is a solution to download jobs offers from multiple sources locally into a
 PostgreSQL and then use full-text search to look into the data using websocket
 and raw HTML/CSS + javascript interactive search.
 
-_Add - before a term to exclude it from the results_
-
+The user can search for keywords interactively, search for words or exclude
+words from the results by prefixing they with `-` like `-java` to exclude
+java from the results. Full-text search will exclude words like `the`, `of`, `a`,
+these are known as [stop words](https://www.postgresql.org/docs/current/textsearch-dictionaries.html#TEXTSEARCH-STOPWORDS).
 ![scrapjobs demo](images/scrapjobs.gif)
 
 The search is triggered on key pressed and throttled to preserve the backend.

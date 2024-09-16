@@ -188,8 +188,16 @@
       };
     }
 
+    let lastQuery = null;
     const sendKeyPress = throttle(100, Query => {
-     socket.send(JSON.stringify({ Query }))
+      // This happens when we move the cursor in the input
+      // we do not want the same input again to the server
+      if (Query === lastQuery) {
+        return;
+      }
+     
+      socket.send(JSON.stringify({ Query }))
+      lastQuery = Query;
     });
 
     function searchKeyPress(e) {

@@ -12,6 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 var upgrader = websocket.Upgrader{
@@ -73,7 +74,7 @@ type SearchResult struct {
 	Headline string
 }
 
-func SearchJobs(conn *pgx.Conn, query string) (*[]SearchResult, error) {
+func SearchJobs(conn *pgxpool.Pool, query string) (*[]SearchResult, error) {
 	var results []SearchResult
 
 	rows, err := conn.Query(context.Background(),
@@ -92,7 +93,7 @@ func SearchJobs(conn *pgx.Conn, query string) (*[]SearchResult, error) {
 		`, query)
 
 	if err == pgx.ErrNoRows {
-		return nil, nil
+		return &results, nil
 	}
 
 	if err != nil {
@@ -127,50 +128,52 @@ type getJobsRequest struct {
 	Query string `json:"query"`
 }
 
-func getJobs(c *gin.Context) {
-	var requestBody getJobsRequest
-	if err := c.BindJSON(&requestBody); err != nil {
-		log.Printf("ERROR %s", err)
-		return
-	}
+func getJobsHandler(conn *pgxpool.Pool) func(*gin.Context) {
+	return func(c *gin.Context) {
+		var requestBody getJobsRequest
+		if err := c.BindJSON(&requestBody); err != nil {
+			log.Printf("ERROR %s", err)
+			return
+		}
 
-	conn, err := pgx.Connect(context.Background(), DataSourceName)
-	if err != nil {
-		log.Panic(err)
-	}
-	defer conn.Close(context.Background())
-	fmt.Printf("Connected!!!\n")
+		conn, err := pgxpool.New(context.Background(), DataSourceName)
+		if err != nil {
+			log.Panic(err)
+		}
+		defer conn.Close()
+		fmt.Printf("Connected!!!\n")
 
-	results, err := SearchJobs(conn, requestBody.Query)
-	if err != nil {
-		log.Panic(err)
-	}
+		results, err := SearchJobs(conn, requestBody.Query)
+		if err != nil {
+			log.Panic(err)
+		}
 
-	c.IndentedJSON(http.StatusOK, results)
+		c.IndentedJSON(http.StatusOK, results)
+	}
 }
 
 func main() {
 	log.Printf("Accessing %s ... ", dbConfig.DbName)
-
-	conn, err := pgx.Connect(context.Background(), DataSourceName)
+	dbpool, err := pgxpool.New(context.Background(), DataSourceName)
 	if err != nil {
-		panic(err)
+		fmt.Fprintf(os.Stderr, "Unable to create connection pool: %v\n", err)
+		os.Exit(1)
 	}
-	log.Printf("Connected!!!\n")
+	defer dbpool.Close()
 
 	var version string
-	err = conn.QueryRow(context.Background(),
+	err = dbpool.QueryRow(context.Background(),
 		"select version()").Scan(&version)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "QueryRow failed: %v\n", err)
 		os.Exit(1)
 	}
 	fmt.Printf("Version: %s\n", version)
-	defer conn.Close(context.Background())
+	defer dbpool.Close()
 
 	// HTTP server setup
 	router := gin.Default()
-	router.POST("/jobs", getJobs)
+	router.POST("/jobs", getJobsHandler(dbpool))
 	// Serve HTML page to trigger connection
 	router.GET("/ws/client", func(c *gin.Context) {
 		c.File("index.html")
@@ -185,12 +188,6 @@ func main() {
 			return
 		}
 
-		conn, err := pgx.Connect(context.Background(), DataSourceName)
-		if err != nil {
-			c.AbortWithError(http.StatusInternalServerError, err)
-			return
-		}
-
 		for {
 			// Read message from client
 			var v getJobsRequest
@@ -200,15 +197,16 @@ func main() {
 				c.AbortWithError(http.StatusInternalServerError, err)
 			}
 
-			results, err := SearchJobs(conn, v.Query)
+			results, err := SearchJobs(dbpool, v.Query)
 			if err != nil {
-				log.Panic(err)
+				log.Printf("%s error\n", err)
+				c.AbortWithError(http.StatusInternalServerError, err)
+				break
 			}
 
 			// Echo message back to client
 			err = client.WriteJSON(results)
 			if err != nil {
-				// panic(err)
 				log.Printf("%s, error while writing message\n", err.Error())
 				c.AbortWithError(http.StatusInternalServerError, err)
 				break
