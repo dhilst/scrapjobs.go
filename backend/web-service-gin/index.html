@@ -45,6 +45,7 @@
         background-color: #ddd4ed;
         padding: 3px 11px;
         margin: 3px;
+        display: inline-block;
       }
 
       a {
@@ -73,6 +74,45 @@
     <div id="output"></div>
 
     <script>
+
+    const colors = [
+      "#FF5733",
+      "#33FF57",
+      "#7D90E8",
+
+      "#F0F8FF",
+      "#FAEBD7",
+      "#D2691E",
+
+      "#FF4500",
+      "#2E8B57",
+      "#FF1493",
+
+      "#1E90FF",
+      "#FFD700"
+    ];
+
+    async function hashStringToNumber(str) {
+      if (str.length < 3) {
+        // Hack to avoid short strings to coliding so much
+        str = str.repeat(3);
+      }
+      const encoder = new TextEncoder();
+      const data = encoder.encode(str);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+      // Convert the first 8 characters of the hex string to a number
+      const hashNumber = parseInt(hashHex.substring(0, 8), 16);
+      return hashNumber;
+    }
+
+    async function pickColor(tag) {
+      const idx = await hashStringToNumber(tag).then(n => n % colors.length);
+      return colors[idx];
+    }
+
     let secure = window.location.protocol.includes('https') ? 's':'';
     var socket = new WebSocket("ws"+secure+"://" +
       window.location.host + "/ws/server");
@@ -81,7 +121,7 @@
       console.log("WebSocket connected!");
     }
 
-    socket.onmessage = function(event) {
+    socket.onmessage = async function(event) {
       const results = JSON.parse(event.data);
       if (results === null) {
         document.getElementById("output").innerhtml = `<em>No data!</em>`;
@@ -89,17 +129,20 @@
       };
       console.assert(Array.isArray(results));
 
-      const tag = tag => `<span class="tag">${tag}</span>`;
-      console.log("tags", results[0].Tags);
+      const tag = async (tag) => {
+        const color = await pickColor(tag);
+        return `<span class="tag" style="background-color: ${color}">${tag}</span>`;
+      };
 
       // Title Tags Url Rank Headline 
-      const lis = results.map(result =>
-        `<li>
+      const lis = await Promise.all(results.map(async result => {
+        const resultTags = await Promise.all(result.Tags.map(tag)).then(strings => strings.join(""));
+        return `<li>
           <a href="${result.Url}" target="_blank" class="kanit-extrabold">${result.Title}</a>
-          ${result.Tags.map(tag).join("")}
+          ${resultTags}
           <pre>${result.Headline}</pre>
-        </li>`)
-        .join("");
+        </li>`
+      })).then(x => x.join(""));
       document.getElementById("output").innerHTML = `<em>Total</em>: ${results.length}<ul>${lis}</ul>`;
     }
 
@@ -115,12 +158,10 @@
     }
 
     const sendKeyPress = throttle(100, Query => {
-      console.log(`>> Sending ${Query}`)
      socket.send(JSON.stringify({ Query }))
     });
 
     function searchKeyPress(e) {
-      console.log(`> Sending ${e.target.value}`)
       sendKeyPress(e.target.value);
     }
 
