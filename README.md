@@ -19,20 +19,31 @@ To populate the database I downloaded the jobs from public available sources,
 I didn't used any authenticated session to download the data, the datata is not
 shared in the repository for obvious reasons anyway.
 
-To download the data I do it in 3 steps:
+To download the data I do it in 3 steps, each step receives the output of
+the previous step. All steps outputs are in JSON.
 
-1. You get a list of links of the jobs to be scrapped and save it in a file
-   like `links.json`, this file is a big list of links, nothing else. Usually
-   is trivial to get this list of links.
-2. Write a scrapper for the links in `links.json`, the code for the scrappers
-   live at `scrap.mjs`. The scrapper should write a file like
-   `outputs/SomeCool_Job_Position.json` being an object with 4 keys `title`,
-   `url`, `descrip` and `tags`. The first 3 comes from the job vacancy page,
-   `descrip` is the text with the vacancy data. `tags` is a list of tags
-   passed from the command line.
-   - You can run the scrapper with the command `node scrap.mjs downloadJobs golangprojects_com.json go golangprojects`
-3. Load the files in the database. There is a `insert_txt.py` script for that
-   purpose.
+1. Run the getLinks scrapper: `node scrap.mjs getLinks rustjobs`. This scrapper
+   outptus a list of links in JSON format. It must open the browser, get the
+   links and output as JSON.
+2. Run the dowloadData scrapper` .. links json .. | node scrap downloadLinks
+ rustjobs rust rustjobs othertag`. This scrapper get the links from the
+   previous step, download the data from each link and save in the `output/.`
+   folder. It outputs the files saved as a JSON string array
+3. Run the importer. ` .. output json files .. | (cd tools/; go run .)` This is not a scrapper. It reads
+   the list of files generated in the previous step and load it into the
+   database. The `new` tag is cleared for old entries, and new entries are
+   inserted with the `new` tag setted.
+
+Running all steps at once:
+
+```
+node scrap.mjs getLinks rustjobs | \
+  node scrap downloadLinks rustjobs rust rustjobs othertag \
+  (cd tools/; go run .)
+```
+
+This will scrap and insert new entries in the database, updating the
+`new` tags accordingly.
 
 ## The Backend
 
