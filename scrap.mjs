@@ -88,7 +88,7 @@ async function getJooble(browser, url) {
 
 var links = JSON.parse(fs.readFileSync(linksFile, 'utf8'));
 const browser = await puppeteer.launch({headless: false});
-const results = await Promise.all(links.slice(0, 1).map(link => getData(browser, link)));
+const results = await Promise.all(links.slice(0).map(link => getData(browser, link)));
 
 for (let result of results) {
   let {title, descrip, url} = result;
@@ -100,4 +100,4 @@ for (let result of results) {
 }
 
 
-// await browser.close()
+await browser.close()
