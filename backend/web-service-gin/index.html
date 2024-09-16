@@ -9,11 +9,11 @@
       .title {
         color: #00dd00;
         text-align: center;
-        text-shadow: 0px 2px 8px #ff00ff;
+        text-shadow: 0px 3px 8px #ff00ff;
       }
 
       .kanit-light-italic {
-        font-family: "Kanit", sans-serif;
+        font-family: "kanit", sans-serif;
         font-weight: 300;
         font-style: italic;
       }
@@ -31,12 +31,14 @@
 
       .search {
         width: 80%;
-        box-shadow: 0 0 10px #14ff00;
         background-color: transparent;
         border: 0;
+        border-bottom: 1px solid #00cc00;
         color: white;
-        border-radius: 8px;
         padding: 5px;
+        font-family: "kanit", sans-serif;
+        font-weight: 300;
+        font-style: italic;
       }
 
       .tag {
@@ -50,17 +52,19 @@
 
       a {
         color: #fff;
-        text-shadow: 0px 2px 8px #00cc00;
+        //text-shadow: 0px 2px 8px #00cc00;
       }
 
       a:visited {
-        color: #aa00aa;
+        color: #544454;
         text-decoration: none;
       }
 
       body {
         background-color: black;
         color: white;
+        font-family: "kanit", sans-serif;
+        font-weight: 300;
       }
     </style>
   </head>
@@ -68,7 +72,6 @@
     <h1 class="title kanit-light-italic">scrapjobs</h1>
     <form onsubmit="return false;">
       <input type="text" class="search" id="message" autocomplete="off" placeholder="Search a job" onkeyup="searchKeyPress(event)" onkeypress="searchKeyPressDown(event)">
-      <!--<button onclick="sendMessage()">Send</button>-->
     </form>
     <hr>
     <div id="output"></div>
@@ -92,8 +95,12 @@
       "#FFD700"
     ];
 
+    const specialTags = {
+      "new": "#33FF57"
+    };
+
     async function hashStringToNumber(str) {
-      if (str.length < 3) {
+      if (str.length < 4) {
         // Hack to avoid short strings to coliding so much
         str = str.repeat(3);
       }
@@ -109,6 +116,9 @@
     }
 
     async function pickColor(tag) {
+      if (tag in specialTags) {
+        return specialTags[tag];
+      }
       const idx = await hashStringToNumber(tag).then(n => n % colors.length);
       return colors[idx];
     }
@@ -131,7 +141,15 @@
 
       const tag = async (tag) => {
         const color = await pickColor(tag);
-        return `<span class="tag" style="background-color: ${color}">${tag}</span>`;
+        const style = (function(){
+          switch (tag) {
+          case "new":
+            return "box-shadow: 0px 0px 30px #e51bc5;";
+          default:
+            return "";
+          }
+        })();
+        return `<span class="tag" style="background-color: ${color}; ${style}">${tag}</span>`;
       };
 
       // Title Tags Url Rank Headline 
