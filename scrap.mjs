@@ -3,10 +3,87 @@ import puppeteer from 'puppeteer';
 // Or import puppeteer from 'puppeteer-core';
 
 // A JSON file containing a list of links of jobs to scrap
-const linksFile = process.argv[2];
-const tags = process.argv.slice(3) || [];
+const command = process.argv[2]; // "downloadJobs" "getLinks"
 
-async function getData(broser, url) {
+(async function main() {
+  switch (command) {
+  case "downloadJobs":
+    await downloadJobsCommand();
+    break;
+  case "getLinks":
+    await getLinksCommand();
+    break;
+  default: 
+    throw "Invalid command"
+    break;
+  }
+})()
+
+async function downloadJobsCommand() {
+  const linksFile = process.argv[3];
+  const data = fs.readFileSync(linksFile);
+  var links = JSON.parse(data);
+  const browser = await puppeteer.launch({headless: false});
+  const results = await Promise.all(links.slice(0).map(link => getData(browser, link)));
+
+  for (let result of results) {
+    let {title, descrip, url} = result;
+    title = title.replaceAll(/[ \/]/g, "_");
+    const path = `./output/${title}.json`;
+
+    fs.writeFileSync(path, JSON.stringify(result, null, 2));
+    console.log(`${path} written`);
+  }
+
+  try {
+    await browser.close()
+  } catch (e) {
+  }
+}
+
+async function getLinksCommand() {
+  const browser = await puppeteer.launch({headless: false});
+  switch (process.argv[3]) {
+  case "golangprojects":
+    await getLinksGolangprojects(browser)
+    break;
+  case "rustjobs":
+    await getLinksRustjobs(browser)
+    break;
+  default:
+    console.error(`Unknown links command ${process.argv[3]}`)
+    break;
+  }
+
+  await browser.close()
+}
+
+async function getLinksGeneric(url, linksFilter, browser) {
+  const page = await browser.newPage();
+  await page.setViewport({width: 1080, height: 1024});
+  await page.goto(url, { waitUntil: "networkidle0" });
+  let links = await page.$$eval("a", as =>
+    as.map(a => a.href));
+  links = links.filter(link => link.startsWith(linksFilter));
+  return links
+}
+
+async function getLinksGolangprojects(browser) {
+  const url = "https://www.golangprojects.com/golang-remote-jobs.html";
+  const linksFilter = "https://www.golangprojects.com/golang-go-job";
+  const links = await getLinksGeneric(url, linksFilter, browser);
+  console.log(JSON.stringify(links, null, 2))
+}
+
+async function getLinksRustjobs(browser) {
+  const url = "https://rustjobs.dev/locations/remote/";
+  const linksFilter = "https://rustjobs.dev/featured-jobs/";
+  const links = await getLinksGeneric(url, linksFilter, browser);
+  console.log(JSON.stringify(links, null, 2))
+}
+
+async function getData(browser, url) {
+  const linksFile = process.argv[3];
   if (linksFile.includes("rustjobs"))
     return getDataRustjobs(browser, url);
   else if (linksFile.includes("indeed"))
@@ -22,7 +99,7 @@ async function getData(broser, url) {
 }
 
 async function getGoLangProjects(browser, url) {
-  console.log(url)
+  const tags = process.argv.slice(4) || [];
   // Navigate the page to a URL.
   const page = await browser.newPage();
   await page.setViewport({width: 1080, height: 1024});
@@ -34,12 +111,11 @@ async function getGoLangProjects(browser, url) {
       .waitHandle()
       .then(div =>
         page.evaluate(e => e.textContent, div));
-    
-
   return {title, descrip, url, tags}
 }
 
 async function getDataRustjobs(browser, url) {
+  const tags = process.argv.slice(4) || [];
   // Navigate the page to a URL.
   const page = await browser.newPage();
   await page.setViewport({width: 1080, height: 1024});
@@ -51,6 +127,7 @@ async function getDataRustjobs(browser, url) {
 }
 
 async function getIndeed(broswer, url) {
+  const tags = process.argv.slice(4) || [];
   const page = await browser.newPage();
   await page.setViewport({width: 1080, height: 1024});
   await page.goto(url);
@@ -65,6 +142,7 @@ async function getIndeed(broswer, url) {
 }
 
 async function getFunctionalWorks(browser, url) {
+  const tags = process.argv.slice(4) || [];
 // /html/body/div[1]/div[2]/div[2]/div/div[1]/div[2]
   const page = await browser.newPage();
   await page.setViewport({width: 1080, height: 1024});
@@ -76,6 +154,7 @@ async function getFunctionalWorks(browser, url) {
 }
 
 async function getJooble(browser, url) {
+  const tags = process.argv.slice(4) || [];
 // /html/body/div[1]/div[2]/div[2]/div/div[1]/div[2]
   const page = await browser.newPage();
   await page.setViewport({width: 1080, height: 1024});
@@ -85,19 +164,3 @@ async function getJooble(browser, url) {
 
   return {title, descrip, url, tags}
 }
-
-var links = JSON.parse(fs.readFileSync(linksFile, 'utf8'));
-const browser = await puppeteer.launch({headless: false});
-const results = await Promise.all(links.slice(0).map(link => getData(browser, link)));
-
-for (let result of results) {
-  let {title, descrip, url} = result;
-  title = title.replaceAll(/[ \/]/g, "_");
-  const path = `./output/${title}.json`;
-
-  fs.writeFileSync(path, JSON.stringify(result, null, 2));
-  console.log(`${path} written`);
-}
-
-
-await browser.close()

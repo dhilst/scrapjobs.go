@@ -1,8 +1,10 @@
 # scrapjobs
 
-This is a solution to download remote jobs from multiple sources locally into a
+This is a solution to download jobs offers from multiple sources locally into a
 PostgreSQL and then use full-text search to look into the data using websocket
 and raw HTML/CSS + javascript interactive search.
+
+_Add - before a term to exclude it from the results_
 
 ![scrapjobs demo](images/scrapjobs.gif)
 
@@ -28,6 +30,7 @@ To download the data I do it in 3 steps:
    `url`, `descrip` and `tags`. The first 3 comes from the job vacancy page,
    `descrip` is the text with the vacancy data. `tags` is a list of tags
    passed from the command line.
+   - You can run the scrapper with the command `node scrap.mjs downloadJobs golangprojects_com.json go golangprojects`
 3. Load the files in the database. There is a `insert_txt.py` script for that
    purpose.
 
