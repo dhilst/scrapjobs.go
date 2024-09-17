@@ -8,6 +8,11 @@ The user can search for keywords interactively, search for words or exclude
 words from the results by prefixing they with `-` like `-java` to exclude
 java from the results. Full-text search will exclude words like `the`, `of`, `a`,
 these are known as [stop words](https://www.postgresql.org/docs/current/textsearch-dictionaries.html#TEXTSEARCH-STOPWORDS).
+
+Use `!foo` in the input aside each search to add  a local tag. Local tags start
+with `!` and are saved in the local storage. They do not affect the system. Use
+`-foo` to remove a previously added tag.
+
 ![scrapjobs demo](images/scrapjobs.gif)
 
 The search is triggered on key pressed and throttled to preserve the backend.
