@@ -9,6 +9,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"path/filepath"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -18,6 +19,8 @@ var DATABASE_URL string = orDefault(
 	"postgres://postgres:Postgres2022!@localhost:5432/scrapjobs")
 
 // var nFlag *int = flag.Int("n", 1234, "help message for flag n")
+
+var fromFlag *string = flag.String("from", "", "Insert from this folder")
 
 func orDefault(s, def string) string {
 	if s == "" {
@@ -48,13 +51,20 @@ func main() {
 	// Remove the *new* tag from the jobs in the database
 	// _, err = conn.Exec(context.Background(), "update jobs set tags = array_remove(tags, 'new')")
 
-	reader := bufio.NewReader(os.Stdin)
-	bytes, err := io.ReadAll(reader)
-	if err != nil {
-		panic(err)
-	}
 	var jsonFiles []string
-	json.Unmarshal(bytes, &jsonFiles)
+	if *fromFlag != "" {
+		jsonFiles, err = filepath.Glob(fmt.Sprintf("%s/*.json", *fromFlag))
+		if err != nil {
+			panic(err)
+		}
+	} else {
+		reader := bufio.NewReader(os.Stdin)
+		bytes, err := io.ReadAll(reader)
+		if err != nil {
+			panic(err)
+		}
+		json.Unmarshal(bytes, &jsonFiles)
+	}
 
 	for _, val := range jsonFiles {
 		jsonFile, err := os.Open(val)
