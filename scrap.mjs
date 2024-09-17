@@ -8,6 +8,11 @@ Object.prototype.dedup = function() {
   return Array.from(new Set(this));
 }
 
+Object.prototype.toa = function() {
+  return Array.from(this);
+}
+
+
 
 // A JSON file containing a list of links of jobs to scrap
 const command = process.argv[2]; // "downloadJobs" "getLinks"
@@ -61,12 +66,16 @@ async function getLinksCommand() {
     links = await getLinksGolangprojects(browser);
     break;
   case "rustjobs":
-    link = await getLinksRustjobs(browser);
+    links = await getLinksRustjobs(browser);
+    break;
+  case "indeed":
+    links = await getLinksIndeed(browser);
     break;
   case undefined:
     const commands = {
       "golangprojects": getLinksGolangprojects,
       "rustjobs": getLinksRustjobs,
+      "indeed": getLinksIndeed,
     };
 
     links = await Promise.all(
@@ -81,6 +90,7 @@ async function getLinksCommand() {
     break;
   }
 
+  // Outputs the links to the stdout so other step can read it
   console.log(JSON.stringify(links, null, 2));
 
   await browser.close();
@@ -116,6 +126,16 @@ async function getLinksRustjobs(browser) {
   return links;
 }
 
+async function getLinksIndeed(browser) {
+  const url = (start) => `https://www.indeed.com/jobs?q=backend+developer&l=remote&start=${start}&pp=gQAPAAAAAAAAAAAAAAACMzlOkgAiAQEBBgId8f7_aNT8YvuqBA-6cRMlcbAro5qS6EZtGNYXOgAA`;
+  const linksFilter = "https://www.indeed.com/rc/";
+  // download the first 5 pages
+  const urls = Array(5).keys().toa().map(x => url(x * 10));
+  const links = await Promise.all(
+    urls.map(url => getLinksGeneric(url, linksFilter, browser)));
+  return links.flat().dedup();
+}
+
 async function getData(browser, url) {
   const linksFile = process.argv[3] || url;
   if (linksFile.includes("rustjobs"))
@@ -129,7 +149,7 @@ async function getData(browser, url) {
   else if (linksFile.includes("jooble"))
     return getJooble(browser, url);
 
-  throw new Error(`Don't know how to scrap ${linksFile}`)
+  console.error(`Don't know how to scrap ${linksFile}`)
 }
 
 async function getGoLangProjects(browser, url) {
@@ -160,7 +180,7 @@ async function getRustjobs(browser, url) {
   return {title, descrip, url, tags}
 }
 
-async function getIndeed(broswer, url) {
+async function getIndeed(browser, url) {
   const tags = process.argv.slice(4) || [];
   const page = await browser.newPage();
   await page.setViewport({width: 1080, height: 1024});
