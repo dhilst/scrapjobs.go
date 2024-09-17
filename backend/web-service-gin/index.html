@@ -50,6 +50,17 @@
         display: inline-block;
       }
 
+      .cmd-input {
+        max-width: 50px;
+        background-color: transparent;
+        border: 0;
+        border-bottom: 1px solid #00cc00;
+        color: white
+      }
+
+      .cmd-input::placeholder {
+        color: #00cc00;
+      }
 
       a {
         color: #fff;
@@ -61,7 +72,7 @@
       }
 
       body {
-        background-color: black;
+        background-color: #111;
         color: white;
         font-family: "kanit", sans-serif;
         font-weight: 300;
@@ -146,6 +157,10 @@
       };
       console.assert(Array.isArray(results));
 
+      function getTags(url) {
+        return JSON.parse(localStorage.getItem(url) || '[]')
+      }
+
       const tag = async (tag) => {
         const color = await pickColor(tag);
         const style = (function(){
@@ -161,16 +176,69 @@
 
       // Title Tags Url Rank Headline 
       const lis = await Promise.all(results.map(async result => {
+        const resultLocalTags = await Promise.all(getTags(result.Url).map(tag)).then(strings => strings.join(""));
         const resultTags = await Promise.all(result.Tags.map(tag)).then(strings => strings.join(""));
         return `<li>
           <a href="${result.Url}" target="_blank" class="kanit-extrabold">${result.Title}</a>
-          ${resultTags}
+          <span class="tags">
+            ${resultTags}
+            ${resultLocalTags}
+          </span>
+          <input class="cmd-input" placeholder=">"/>
           <pre>${result.Headline}</pre>
         </li>`
       })).then(x => x.join(""));
+
       const element = document.createElement("div");
       element.innerHTML = `<em>Total</em>: ${results.length}<ul>${lis}</ul>`;
       element.style.display = 'none';
+      element.querySelectorAll("input").forEach(input => {
+        input.addEventListener("keyup", async function(event) {
+          event.preventDefault();
+          const url = event.target.parentElement.parentElement.querySelector("a").href;
+          console.assert(url !== undefined);
+
+          // Save a new tag in the local storage using url as key
+          async function addTag(newTag) {
+            const currentTags = getTags(url);
+            if (currentTags.indexOf(newTag) !== -1) {
+              return;
+            }
+            const newTags = JSON.stringify(Array.from(new Set([...currentTags, newTag])));
+            localStorage.setItem(url, newTags);
+            const newTagElement = document.createElement("span")
+            newTagElement.innerHTML = await tag(newTag);
+            event.target.parentElement.querySelector(".tags").appendChild(newTagElement);
+          }
+
+          async function removeTag(tagToRemove) {
+            const currentTags = getTags(url);
+            if (currentTags.indexOf(tagToRemove) === -1) {
+              return;
+            }
+
+            const newTags = JSON.stringify(currentTags.filter(x => x !== tagToRemove));
+            localStorage.setItem(url, newTags)
+            const tagsContainer = event.target.parentElement.querySelector(".tags");
+            const child = Array.from(tagsContainer.childNodes)
+              .find(x => x.textContent === tagToRemove);
+            if (child !== undefined) {
+              tagsContainer.removeChild(child);
+            }
+          }
+
+          // The enter key
+          if (event.keyCode === 13) {
+            const command = event.target.value;
+
+            if (command.startsWith("!")) {
+              await addTag(command)
+            } else if (command.startsWith("-")) {
+              await removeTag("!" + command.slice(1))
+            }
+          }
+        });
+      });
       document.getElementById("output").replaceChildren(element);
       // This is to fix a flickering of the a:visited style blinking
       // after each search.
@@ -219,6 +287,20 @@
       var message = document.getElementById("message").value;
       socket.send(JSON.stringify({ Query: message }));
       document.getElementById("message").value = "";
+    }
+
+    window.onkeyup = function(event) {
+      if (event.target.id === "message") {
+        return;
+      }
+
+      switch (event.key) {
+      case "!":
+        console.log("BANG!");
+        break;
+      defaut:
+        break;
+      }
     }
     </script>
   </body>
