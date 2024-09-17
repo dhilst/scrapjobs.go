@@ -34,23 +34,23 @@ shared in the repository for obvious reasons anyway.
 To download the data I do it in 3 steps, each step receives the output of
 the previous step. All steps outputs are in JSON.
 
-1. Run the getLinks scrapper: `node scrap.mjs getLinks rustjobs`. This scrapper
+1. Run the getLinks scrappers: `node scrap.mjs getLinks`. This scrapper
    outptus a list of links in JSON format. It must open the browser, get the
    links and output as JSON.
-2. Run the dowloadData scrapper` .. links json .. | node scrap downloadLinks
- rustjobs rust rustjobs othertag`. This scrapper get the links from the
+2. Run the dowloadData scrappers ` .. links json .. | node scrap downloadLinks
+ rustjobs rust rustjobs othertag`. These scrappers get the links from the
    previous step, download the data from each link and save in the `output/.`
    folder. It outputs the files saved as a JSON string array
-3. Run the importer. ` .. output json files .. | (cd tools/; go run .)` This is not a scrapper. It reads
-   the list of files generated in the previous step and load it into the
-   database. The `new` tag is cleared for old entries, and new entries are
-   inserted with the `new` tag setted.
+3. Run the importer. ` .. output json files .. | (cd tools/; go run .)` This is
+   not a scrapper. It reads the list of files generated in the previous step
+and load it into the database. The `new` tag is cleared for old entries, and
+new entries are inserted with the `new` tag setted.
 
 Running all steps at once:
 
 ```
-node scrap.mjs getLinks rustjobs | \
-  node scrap downloadLinks rustjobs rust rustjobs othertag \
+node scrap.mjs getLinks | \
+  node scrap downloadLinks | \
   (cd tools/; go run .)
 ```
 
