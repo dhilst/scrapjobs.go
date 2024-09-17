@@ -20,6 +20,11 @@ On the backend we simply execute the search and return the results as JSON. In
 the frontend again we swap generate HTML dynamically and replace `.innerHTML`,
 nothing new.
 
+Keybinds:
+
+* `/` to jump to the search bar
+* `<tab>` to cycle between links and tag inputs
+
 ## The data ETL
 
 To populate the database I downloaded the jobs from public available sources,

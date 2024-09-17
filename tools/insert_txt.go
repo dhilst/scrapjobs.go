@@ -46,7 +46,7 @@ func main() {
 	defer conn.Close(context.Background())
 
 	// Remove the *new* tag from the jobs in the database
-	_, err = conn.Exec(context.Background(), "update jobs set tags = array_remove(tags, 'new')")
+	// _, err = conn.Exec(context.Background(), "update jobs set tags = array_remove(tags, 'new')")
 
 	reader := bufio.NewReader(os.Stdin)
 	bytes, err := io.ReadAll(reader)

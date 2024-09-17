@@ -58,6 +58,10 @@
         color: white
       }
 
+      input:focus {
+        outline: none;
+      }
+
       .cmd-input::placeholder {
         color: #00cc00;
       }
@@ -194,13 +198,13 @@
       element.style.display = 'none';
       element.querySelectorAll("input").forEach(input => {
         input.addEventListener("keyup", async function(event) {
+          console.log('keyup', event.target);
           event.preventDefault();
-          const url = event.target.parentElement.parentElement.querySelector("a").href;
-          console.assert(url !== undefined);
 
           // Save a new tag in the local storage using url as key
-          async function addTag(newTag) {
+          async function addTag(url, newTag) {
             const currentTags = getTags(url);
+            console.log("tags", url, currentTags);
             if (currentTags.indexOf(newTag) !== -1) {
               return;
             }
@@ -211,7 +215,7 @@
             event.target.parentElement.querySelector(".tags").appendChild(newTagElement);
           }
 
-          async function removeTag(tagToRemove) {
+          async function removeTag(url, tagToRemove) {
             const currentTags = getTags(url);
             if (currentTags.indexOf(tagToRemove) === -1) {
               return;
@@ -230,12 +234,16 @@
           // The enter key
           if (event.keyCode === 13) {
             const command = event.target.value;
+            const url = event.target.parentElement.querySelector("a").href;
+            console.assert(url !== undefined);
 
             if (command.startsWith("!")) {
-              await addTag(command)
+              await addTag(url, command)
             } else if (command.startsWith("-")) {
-              await removeTag("!" + command.slice(1))
+              await removeTag(url, "!" + command.slice(1))
             }
+            
+            event.target.value = "";
           }
         });
       });
@@ -259,7 +267,7 @@
     let lastQuery = null;
     const sendKeyPress = throttle(100, Query => {
       // This happens when we move the cursor in the input
-      // we do not want the same input again to the server
+      // we do not want to send the same input again to the server
       if (Query === lastQuery) {
         return;
       }
@@ -289,19 +297,14 @@
       document.getElementById("message").value = "";
     }
 
-    window.onkeyup = function(event) {
-      if (event.target.id === "message") {
-        return;
-      }
-
+    document.addEventListener("keydown", event => {
       switch (event.key) {
-      case "!":
-        console.log("BANG!");
-        break;
-      defaut:
+      case "/":
+        event.preventDefault();
+        document.querySelector(".search").focus();
         break;
       }
-    }
+    });
     </script>
   </body>
 </html>
