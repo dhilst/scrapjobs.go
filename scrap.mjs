@@ -12,8 +12,6 @@ Object.prototype.toa = function() {
   return Array.from(this);
 }
 
-
-
 // A JSON file containing a list of links of jobs to scrap
 const command = process.argv[2]; // "downloadJobs" "getLinks"
 
@@ -39,7 +37,21 @@ async function downloadJobsCommand() {
     const data = await fs.readFile('/dev/stdin');
     var links = JSON.parse(data);
     const browser = await puppeteer.launch({headless: false});
-    const results = await Promise.all(links.slice(0).map(link => getData(browser, link)));
+    let results = [];
+    const BATCH_SIZE = 10;
+    for (var i = 0; i < links.length; i += BATCH_SIZE) {
+      const batch = links.slice(i, i+BATCH_SIZE)
+      results.push(...await Promise.all(
+        batch.map(link => 
+          // return null in case of error
+          getData(browser, link).catch(e => {
+            console.error("Scrapper failed", e);
+            return null
+          })
+        )))
+    }
+    // Remove nulls from the failed scrappers
+    results = results.filter(x => x !== null)
     let outputs = [];
 
     for (let result of results) {
@@ -71,11 +83,15 @@ async function getLinksCommand() {
   case "indeed":
     links = await getLinksIndeed(browser);
     break;
+  case "functionalworks":
+    links = await getLinksFunctionalworks(browser);
+    break;
   case undefined:
     const commands = {
       "golangprojects": getLinksGolangprojects,
       "rustjobs": getLinksRustjobs,
       "indeed": getLinksIndeed,
+      "functionalworkds": getLinksFunctionalworks,
     };
 
     links = await Promise.all(
@@ -136,24 +152,32 @@ async function getLinksIndeed(browser) {
   return links.flat().dedup();
 }
 
+async function getLinksFunctionalworks(browser) {
+  //https://functional.works-hub.com/jobs/search?page=4&remote=true
+  const url = (start) => `https://functional.works-hub.com/jobs/search?page=${start}&remote=true`;
+  const linksFilter = "https://functional.works-hub.com/jobs/";
+  // download the first 5 pages
+  const links = await getLinksGeneric(url(4), linksFilter, browser);
+  return links;
+}
+
 async function getData(browser, url) {
-  const linksFile = process.argv[3] || url;
-  if (linksFile.includes("rustjobs"))
+  if (url.includes("rustjobs"))
     return getRustjobs(browser, url);
-  else if (linksFile.includes("indeed"))
+  else if (url.includes("indeed"))
     return getIndeed(browser, url);
-  else if (linksFile.includes("golangprojects"))
+  else if (url.includes("golangprojects"))
     return getGoLangProjects(browser, url);
-  else if (linksFile.includes("functionalworks"))
+  else if (url.startsWith("https://functional.works-hub.com"))
     return getFunctionalWorks(browser, url);
-  else if (linksFile.includes("jooble"))
+  else if (url.includes("jooble"))
     return getJooble(browser, url);
 
   console.error(`Don't know how to scrap ${linksFile}`)
 }
 
 async function getGoLangProjects(browser, url) {
-  const tags = process.argv.slice(4) || [];
+  const tags = ["go", "golangprojects"];
   // Navigate the page to a URL.
   const page = await browser.newPage();
   await page.setViewport({width: 1080, height: 1024});
@@ -165,11 +189,12 @@ async function getGoLangProjects(browser, url) {
       .waitHandle()
       .then(div =>
         page.evaluate(e => e.textContent, div));
+  await page.close();
   return {title, descrip, url, tags}
 }
 
 async function getRustjobs(browser, url) {
-  const tags = process.argv.slice(4) || [];
+  const tags = ["rust", "rustjobs"];
   // Navigate the page to a URL.
   const page = await browser.newPage();
   await page.setViewport({width: 1080, height: 1024});
@@ -177,11 +202,12 @@ async function getRustjobs(browser, url) {
   //
   const title = await page.waitForSelector("h1").then(h1 => page.evaluate(e => e.textContent, h1));
   const descrip = await page.$$eval(".markdown-component p", elements => elements.map(x => x.textContent).join("\n"))
+  await page.close();
   return {title, descrip, url, tags}
 }
 
 async function getIndeed(browser, url) {
-  const tags = process.argv.slice(4) || [];
+  const tags = ["indeed"];
   const page = await browser.newPage();
   await page.setViewport({width: 1080, height: 1024});
   await page.goto(url);
@@ -192,11 +218,12 @@ async function getIndeed(browser, url) {
     descrip = await page.$$eval(".jobsearch-BodyContainer", elements =>
       elements.map(x => x.textContent).join("\n"))
   }
+  await page.close();
   return {title, descrip, url, tags}
 }
 
 async function getFunctionalWorks(browser, url) {
-  const tags = process.argv.slice(4) || [];
+  const tags = ["functionalworks"];
 // /html/body/div[1]/div[2]/div[2]/div/div[1]/div[2]
   const page = await browser.newPage();
   await page.setViewport({width: 1080, height: 1024});
@@ -204,11 +231,12 @@ async function getFunctionalWorks(browser, url) {
   const title = await page.waitForSelector("h1").then(h1 => page.evaluate(e => e.textContent, h1));
   let descrip = await page.$$eval("xpath/html/body/div[1]/div[2]/div[2]/div/div[1]/div[2]", elements => elements.map(x => x.textContent).join("\n"))
 
+  await page.close();
   return {title, descrip, url, tags}
 }
 
 async function getJooble(browser, url) {
-  const tags = process.argv.slice(4) || [];
+  const tags = ["jooble"];
 // /html/body/div[1]/div[2]/div[2]/div/div[1]/div[2]
   const page = await browser.newPage();
   await page.setViewport({width: 1080, height: 1024});
@@ -216,5 +244,6 @@ async function getJooble(browser, url) {
   const title = await page.waitForSelector("h1").then(h1 => page.evaluate(e => e.textContent, h1));
   let descrip = await page.$$eval("xpath/html/body/div/div/div[1]/div/div[1]/main/div[1]/div[2]/div[1]/div[2]/div/div/div/div[2]/div/div", elements => elements.map(x => x.textContent).join("\n"))
 
+  await page.close();
   return {title, descrip, url, tags}
 }
