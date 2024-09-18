@@ -47,8 +47,7 @@ var dbConfig = dbConfigT{
 	TableName:      "scrapjobs",
 }
 
-var DataSourceName = fmt.Sprintf("host=%s port=%s user=%s "+
-	"password=%s dbname=%s sslmode=disable", dbConfig.Host, dbConfig.Port, dbConfig.User, dbConfig.Password, dbConfig.DbName)
+var DATABASE_URL string = os.Getenv("DATABASE_URL")
 
 func GetVersion() (*string, error) {
 	sqlStatement, err := db.Query("SELECT version()")
@@ -81,8 +80,6 @@ func SearchJobs(conn *pgxpool.Pool, terms []string, tags []string) (*[]SearchRes
 		// Search for nothing
 		return &results, nil
 	}
-
-	fmt.Printf("Tags %v\n", tags)
 
 	var rows pgx.Rows
 	// I couldn't make this work with a single query
@@ -205,7 +202,7 @@ func getJobsHandler(conn *pgxpool.Pool) func(*gin.Context) {
 
 func main() {
 	log.Printf("Accessing %s ... ", dbConfig.DbName)
-	dbpool, err := pgxpool.New(context.Background(), DataSourceName)
+	dbpool, err := pgxpool.New(context.Background(), DATABASE_URL)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to create connection pool: %v\n", err)
 		os.Exit(1)
@@ -276,6 +273,6 @@ func main() {
 
 	})
 
-	router.Run("localhost:8080")
+	router.Run("0.0.0.0:8080")
 
 }

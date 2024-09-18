@@ -3,6 +3,8 @@
 Scrapes over tech jobs websites, and provides a
 nice search interface for it.
 
+You can try [scrapjobs](http://vps54925.publiccloud.com.br:8080/) live!
+
 ## Usage
 
 ![scrapjobs demo](images/scrapjobs.gif)
@@ -79,3 +81,6 @@ The database schema is in `db.sql` for now, you need it in order to create the d
 # TODO
 
 * Improve the first-time setup 
+* Deploy automation
+* Name registration
+* HTTPS

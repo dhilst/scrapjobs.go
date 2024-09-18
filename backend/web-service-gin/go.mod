@@ -1,4 +1,4 @@
-module example/web-service-gin
+module scrapjobs
 
 go 1.22.4
 
