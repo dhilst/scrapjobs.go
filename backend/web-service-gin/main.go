@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 
 	// "database.sql"
 	"github.com/gin-gonic/gin"
@@ -74,23 +75,78 @@ type SearchResult struct {
 	Headline string
 }
 
-func SearchJobs(conn *pgxpool.Pool, query string) (*[]SearchResult, error) {
+func SearchJobs(conn *pgxpool.Pool, terms []string, tags []string) (*[]SearchResult, error) {
 	var results []SearchResult
+	if len(terms)+len(tags) == 0 {
+		// Search for nothing
+		return &results, nil
+	}
 
-	rows, err := conn.Query(context.Background(),
-		`
-		select
-		  title,
-		  tags,
-		  url,
-		  ts_rank_cd(descrip_fts, query) as rank,
-		  ts_headline('english', descrip, query)
-		from jobs,
-		  websearch_to_tsquery('english', $1) query
-		where descrip_fts @@ query
-		  and ts_rank_cd(descrip_fts, query) > 0.001
-		order by rank desc;
-		`, query)
+	fmt.Printf("Tags %v\n", tags)
+
+	var rows pgx.Rows
+	// I couldn't make this work with a single query
+	// `$2 <@ tags` does not work as expected when tags = []
+	if len(terms) == 0 && len(tags) > 0 {
+		// Search for tags only
+		rows, err = conn.Query(context.Background(),
+			`
+			select
+			  title,
+			  tags,
+			  url,
+			  1 as rank,
+			  '' as headline
+			from jobs,
+			  websearch_to_tsquery('english', $1) query
+			where $2 <@ tags
+			order by rank desc
+			limit 100
+			`,
+			strings.Join(terms, " "),
+			tags,
+		)
+	} else if len(terms) > 0 && len(tags) == 0 {
+		// Search for terms only
+		rows, err = conn.Query(context.Background(),
+			`
+			select
+			  title,
+			  tags,
+			  url,
+			  ts_rank_cd(descrip_fts, query) as rank,
+			  ts_headline('english', descrip, query)
+			from jobs,
+			  websearch_to_tsquery('english', $1) query
+			where descrip_fts @@ query
+			  and ts_rank_cd(descrip_fts, query) > 0.001
+			order by rank desc
+			limit 100
+			`,
+			strings.Join(terms, " "),
+		)
+	} else if len(terms) > 0 && len(tags) > 0 {
+		// Search for terms and tags
+		rows, err = conn.Query(context.Background(),
+			`
+			select
+			  title,
+			  tags,
+			  url,
+			  ts_rank_cd(descrip_fts, query) as rank,
+			  ts_headline('english', descrip, query)
+			from jobs,
+			  websearch_to_tsquery('english', $1) query
+			where descrip_fts @@ query
+			  and ts_rank_cd(descrip_fts, query) > 0.001
+			  and $2 <@ tags
+			order by rank desc
+			limit 100
+			`,
+			strings.Join(terms, " "),
+			tags,
+		)
+	}
 
 	if err == pgx.ErrNoRows {
 		return &results, nil
@@ -136,14 +192,9 @@ func getJobsHandler(conn *pgxpool.Pool) func(*gin.Context) {
 			return
 		}
 
-		conn, err := pgxpool.New(context.Background(), DataSourceName)
-		if err != nil {
-			log.Panic(err)
-		}
-		defer conn.Close()
 		fmt.Printf("Connected!!!\n")
 
-		results, err := SearchJobs(conn, requestBody.Query)
+		results, err := SearchJobs(conn, strings.Fields(requestBody.Query), make([]string, 0))
 		if err != nil {
 			log.Panic(err)
 		}
@@ -175,7 +226,7 @@ func main() {
 	router := gin.Default()
 	router.POST("/jobs", getJobsHandler(dbpool))
 	// Serve HTML page to trigger connection
-	router.GET("/ws/client", func(c *gin.Context) {
+	router.GET("/", func(c *gin.Context) {
 		c.File("index.html")
 	})
 
@@ -197,7 +248,17 @@ func main() {
 				c.AbortWithError(http.StatusInternalServerError, err)
 			}
 
-			results, err := SearchJobs(dbpool, v.Query)
+			var terms []string
+			var tags []string
+			for _, token := range strings.Fields(v.Query) {
+				if strings.HasPrefix(token, "#") {
+					tags = append(tags, token[1:])
+				} else {
+					terms = append(terms, token)
+				}
+			}
+
+			results, err := SearchJobs(dbpool, terms, tags)
 			if err != nil {
 				log.Printf("%s error\n", err)
 				c.AbortWithError(http.StatusInternalServerError, err)
