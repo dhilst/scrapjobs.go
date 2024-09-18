@@ -1,29 +1,32 @@
 # scrapjobs
 
-This is a solution to download jobs offers from multiple sources locally into a
-PostgreSQL and then use full-text search to look into the data using websocket
-and raw HTML/CSS + javascript interactive search.
+Scrapes over tech jobs websites, and provides a
+nice search interface for it.
 
-The user can search for keywords interactively, search for words or exclude
-words from the results by prefixing they with `-` like `-java` to exclude
-java from the results. Full-text search will exclude words like `the`, `of`, `a`,
-these are known as [stop words](https://www.postgresql.org/docs/current/textsearch-dictionaries.html#TEXTSEARCH-STOPWORDS).
-
-Use `!foo` in the input aside each search to add  a local tag. Local tags start
-with `!` and are saved in the local storage. They do not affect the system. Use
-`-foo` to remove a previously added tag.
+## Usage
 
 ![scrapjobs demo](images/scrapjobs.gif)
 
 The search is triggered on key pressed and throttled to preserve the backend.
 On the backend we simply execute the search and return the results as JSON. In
-the frontend again we swap generate HTML dynamically and replace `.innerHTML`,
-nothing new.
+the frontend again we swap generate HTML dynamically and replace `.innerHTML`.
 
-Keybinds:
+### Keybinds
 
 * `/` to jump to the search bar
 * `<tab>` to cycle between links and tag inputs
+
+### Search
+
+* `rust backend` use simple words as terms 
+* `golang backend -java` use `-` before a word to remove it from the search
+* `golang #new` use `#` before a words to search for a tag
+
+### Local tags
+
+* Use `!sometag` in the `>___` input aside each vacancy to add a local tag.
+* Use `-sometag` in the `>___` input aside each vacancy to iremove a local tag `!sometag`
+    * Local tags are saved in the browser, use it to bookkeep your applications. 
 
 ## The data ETL
 
@@ -61,5 +64,18 @@ This will scrap and insert new entries in the database, updating the
 
 The backend lives in `backend/web-service-gin` folder. I'm using gin framework.
 The backend has only one endpoints where the user can send a query or the websocket
-at `/ws/server`. The `/ws/client` loads `index.html` a pure HTML client that
+at `/ws/server`. The `/` loads `index.html` a pure HTML client that
 render searches interactively.
+
+## The Database
+
+I'm using Postgres with [full-text search](https://www.postgresql.org/docs/current/textsearch.html).
+At each keystroke in the frontend (after being throttled), the search is sent to the backend. The
+backend then interprets thje proper query, run and returns the JSON.
+
+The database schema is in `db.sql` for now, you need it in order to create the database.
+
+
+# TODO
+
+* Improve the first-time setup 
