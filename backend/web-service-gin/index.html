@@ -39,6 +39,7 @@
         font-family: "kanit", sans-serif;
         font-weight: 300;
         font-style: italic;
+        font-size: 1.6em;
       }
 
       .tag {
@@ -75,11 +76,20 @@
         color: #544454;
       }
 
+      h1 {
+        font-size: 48px;
+      } 
+
+      li {
+        margin-bottom: 1em;
+      }
+
       body {
         background-color: #111;
         color: white;
         font-family: "kanit", sans-serif;
         font-weight: 300;
+        font-size: 1.2em;
       }
 
       #output b {
@@ -205,13 +215,15 @@
         const resultLocalTags = await Promise.all(getTags(result.Url).map(tag)).then(strings => strings.join(""));
         const resultTags = await Promise.all(result.Tags.map(tag)).then(strings => strings.join(""));
         return `<li>
+          <h2>
           <a href="${result.Url}" target="_blank" class="kanit-extrabold">${result.Title}</a>
+          </h2>
           <span class="tags">
             ${resultTags}
             ${resultLocalTags}
           </span>
           <input class="cmd-input" placeholder=">"/>
-          <pre>${result.Headline}</pre>
+          <div>${result.Headline}</div>
         </li>`
       })).then(x => x.join(""));
 
