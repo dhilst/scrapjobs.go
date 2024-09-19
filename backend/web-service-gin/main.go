@@ -8,12 +8,10 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"strconv"
 	"strings"
-	"syscall"
-	"time"
 
 	// "database.sql"
+	"github.com/gin-gonic/autotls"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	"github.com/jackc/pgx/v5"
@@ -31,7 +29,7 @@ var upgrader = websocket.Upgrader{
 var db *sql.DB
 var err error
 
-var databaseUrl = flag.String("db", "postgre://postgres:Postgres2022!@localhost/scrapjobs", "Database URL to connect")
+var databaseUrl = flag.String("db", "postgres://postgres:Postgres2022!@localhost/scrapjobs", "Database URL to connect")
 var httpPort = flag.String("port", "8080", "HTTP port to bind to")
 
 func GetEnvOrDef(env string, def string) string {
@@ -219,6 +217,10 @@ func main() {
 	router.GET("/", func(c *gin.Context) {
 		c.File("index.html")
 	})
+	// Ping handler
+	router.GET("/ping", func(c *gin.Context) {
+		c.String(http.StatusOK, "pong")
+	})
 
 	router.GET("/ws/server", func(c *gin.Context) {
 		client, err := upgrader.Upgrade(c.Writer, c.Request, nil)
@@ -266,28 +268,19 @@ func main() {
 
 	})
 
-	go func() {
-		log.Fatal(router.Run(fmt.Sprintf("0.0.0.0:%s", *httpPort)))
-	}()
-
-	time.Sleep(1 * time.Second)
-
-	// Drop privileges
-	if os.Geteuid() == 0 {
-		if uid, gid := os.Getenv("SUDO_UID"), os.Getenv("SUDO_GID"); uid != "" && gid != "" {
-			var uidi int
-			var gidi int
-			if uidi, err = strconv.Atoi(uid); err != nil {
-				panic(err)
-			}
-			if gidi, err = strconv.Atoi(gid); err != nil {
-				panic(err)
-			}
-			syscall.Setegid(gidi)
-			syscall.Seteuid(uidi)
-		}
+	if *httpPort == "8080" {
+		runDev(router)
+	} else {
+		runProd(router)
 	}
+}
 
+func runProd(router *gin.Engine) {
 	// blocks forever
-	select {}
+	log.Fatal(autotls.Run(router, "scrapjobs.xyz"))
+}
+
+func runDev(router *gin.Engine) {
+	// blocks forever
+	log.Fatal(router.Run(fmt.Sprintf("0.0.0.0:%s", *httpPort)))
 }

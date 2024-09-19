@@ -3,7 +3,7 @@
 Scrapes over tech jobs websites, and provides a
 nice search interface for it.
 
-You can try [scrapjobs](http://vps54925.publiccloud.com.br:8080/) live!
+You can try [https://scrapjobs.xyz/](https://scrapjobs.xyz/) live!
 
 ## Usage
 

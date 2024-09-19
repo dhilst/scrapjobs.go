@@ -101,40 +101,62 @@
     <script>
 
     const colors = [
-      "#FF5733",
-      "#33FF57",
-      "#7D90E8",
-
-      "#F0F8FF",
-      "#FAEBD7",
-      "#D2691E",
-
-      "#FF4500",
-      "#2E8B57",
-      "#FF1493",
-
-      "#1E90FF",
-      "#FFD700"
+      "#FF5733", "#33FF57", "#3357FF", "#FF33A1", "#33FFF9",
+      "#FF33D4", "#FFC300", "#C70039", "#900C3F", "#581845",
+      "#DAF7A6", "#FFC0CB", "#FF4500", "#ADFF2F", "#FF6347",
+      "#4682B4", "#FFD700", "#4B0082", "#8A2BE2", "#7FFF00",
+      "#D2691E", "#FF8C00", "#20B2AA", "#FF1493", "#1E90FF",
+      "#32CD32", "#FFB6C1", "#8B0000", "#3CB371", "#FFD700",
+      "#DC143C", "#708090", "#A52A2A", "#FF69B4", "#B22222",
+      "#F0E68C", "#00FA9A", "#8FBC8F", "#FF7F50", "#FFFACD",
+      "#ADFF2F", "#FFDAB9", "#FF1493", "#E6E6FA", "#F08080",
+      "#FA8072", "#00BFFF", "#7CFC00", "#FFDEAD", "#FF00FF",
+      "#FFEC8B", "#B0E0E6", "#C71585", "#DDA0DD", "#FFE4B5",
+      "#A0522D", "#C0C0C0", "#D3D3D3", "#D8BFD8", "#FFD700",
+      "#B0C4DE", "#FF4500", "#5F9EA0", "#708090", "#FFB347",
+      "#C0C0C0", "#B22222", "#7FFF00", "#B0E0E6", "#B8860B",
+      "#FF6347", "#F4A460", "#D2B48C", "#D2691E", "#F0E68C",
+      "#FFF8DC", "#00FF7F", "#40E0D0", "#4682B4", "#FF69B4",
+      "#C71585", "#BDB76B", "#DAA520", "#FFFACD", "#FFE4E1",
+      "#B0E0E6", "#3CB371", "#F5DEB3", "#B22222", "#98FB98",
+      "#FFB6C1", "#FF4500", "#E0FFFF", "#B0C4DE", "#FFDAB9",
+      "#ADFF2F", "#FFF0F5",
     ];
 
     const specialTags = {
       "new": "#33FF57"
     };
 
-    async function hashStringToNumber(str) {
-      if (str.length < 4) {
-        // Hack to avoid short strings to coliding so much
-        str = str.repeat(3);
+
+    let hashStringToNumber;
+    if (window.crypto?.subtle) {
+      // This implementation deepends on cypto which is only
+      // available when using HTTPS or localhost
+      hashStringToNumber = async (str, algo = "SHA-256") => {
+        let strBuf = new TextEncoder().encode(str);
+        return crypto.subtle.digest(algo, strBuf)
+          .then(hash => {
+            const view = new DataView(hash);
+            return view.getUint32(0)
+          });
       }
-      var hash = 0,
-        i, chr;
-      if (this.length === 0) return hash;
-      for (i = 0; i < this.length; i++) {
-        chr = this.charCodeAt(i);
-        hash = ((hash << 5) - hash) + chr;
-        hash |= 0; // Convert to 32bit integer
+    } else {
+      // This implementation works on HTTP but it colides a lot. 
+      hashStringToNumber = async (str) => {
+        if (str.length < 4) {
+          // Hack to avoid short strings to coliding so much
+          str = str.repeat(3);
+        }
+        var hash = 0,
+          i, chr;
+        if (this.length === 0) return hash;
+        for (i = 0; i < this.length; i++) {
+          chr = this.charCodeAt(i);
+          hash = ((hash << 5) - hash) + chr;
+          hash |= 0; // Convert to 32bit integer
+        }
+        return hash;
       }
-      return hash;
     }
 
     async function pickColor(tag) {
@@ -170,7 +192,7 @@
         const style = (function(){
           switch (tag) {
           case "new":
-            return "box-shadow: 0px 0px 30px #e51bc5;";
+            return "box-shadow: 0px 0px 12px #e51bc5;";
           default:
             return "";
           }
