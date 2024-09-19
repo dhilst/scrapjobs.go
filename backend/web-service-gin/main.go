@@ -3,11 +3,15 @@ package main
 import (
 	"context"
 	"database/sql"
+	"flag"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
+	"syscall"
+	"time"
 
 	// "database.sql"
 	"github.com/gin-gonic/gin"
@@ -27,27 +31,15 @@ var upgrader = websocket.Upgrader{
 var db *sql.DB
 var err error
 
-type dbConfigT struct {
-	PostgresDriver string
-	User           string
-	Host           string
-	Port           string
-	Password       string
-	DbName         string
-	TableName      string
-}
+var databaseUrl = flag.String("db", "postgre://postgres:Postgres2022!@localhost/scrapjobs", "Database URL to connect")
+var httpPort = flag.String("port", "8080", "HTTP port to bind to")
 
-var dbConfig = dbConfigT{
-	PostgresDriver: "postgres",
-	User:           "postgres",
-	Host:           "localhost",
-	Port:           "5432",
-	Password:       "Postgres2022!",
-	DbName:         "scrapjobs",
-	TableName:      "scrapjobs",
+func GetEnvOrDef(env string, def string) string {
+	if val := os.Getenv(env); val != "" {
+		return val
+	}
+	return def
 }
-
-var DATABASE_URL string = os.Getenv("DATABASE_URL")
 
 func GetVersion() (*string, error) {
 	sqlStatement, err := db.Query("SELECT version()")
@@ -201,8 +193,9 @@ func getJobsHandler(conn *pgxpool.Pool) func(*gin.Context) {
 }
 
 func main() {
-	log.Printf("Accessing %s ... ", dbConfig.DbName)
-	dbpool, err := pgxpool.New(context.Background(), DATABASE_URL)
+	flag.Parse()
+
+	dbpool, err := pgxpool.New(context.Background(), *databaseUrl)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to create connection pool: %v\n", err)
 		os.Exit(1)
@@ -273,6 +266,28 @@ func main() {
 
 	})
 
-	router.Run("0.0.0.0:8080")
+	go func() {
+		log.Fatal(router.Run(fmt.Sprintf("0.0.0.0:%s", *httpPort)))
+	}()
 
+	time.Sleep(1 * time.Second)
+
+	// Drop privileges
+	if os.Geteuid() == 0 {
+		if uid, gid := os.Getenv("SUDO_UID"), os.Getenv("SUDO_GID"); uid != "" && gid != "" {
+			var uidi int
+			var gidi int
+			if uidi, err = strconv.Atoi(uid); err != nil {
+				panic(err)
+			}
+			if gidi, err = strconv.Atoi(gid); err != nil {
+				panic(err)
+			}
+			syscall.Setegid(gidi)
+			syscall.Seteuid(uidi)
+		}
+	}
+
+	// blocks forever
+	select {}
 }
