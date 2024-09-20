@@ -21,6 +21,7 @@ var DATABASE_URL string = orDefault(
 // var nFlag *int = flag.Int("n", 1234, "help message for flag n")
 
 var fromFlag *string = flag.String("from", "", "Insert from this folder")
+var replaceTagsFlag *bool = flag.Bool("replace-tags", true, "Delete 'new' tags before inserting")
 
 func orDefault(s, def string) string {
 	if s == "" {
@@ -49,7 +50,9 @@ func main() {
 	defer conn.Close(context.Background())
 
 	// Remove the *new* tag from the jobs in the database
-	// _, err = conn.Exec(context.Background(), "update jobs set tags = array_remove(tags, 'new')")
+	if *replaceTagsFlag {
+		_, err = conn.Exec(context.Background(), "update jobs set tags = array_remove(tags, 'new')")
+	}
 
 	var jsonFiles []string
 	if *fromFlag != "" {

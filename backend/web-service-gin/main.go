@@ -190,6 +190,23 @@ func getJobsHandler(conn *pgxpool.Pool) func(*gin.Context) {
 	}
 }
 
+type engine struct {
+	*gin.Engine
+}
+
+func (router *engine) serveFile(route, file string) {
+	router.GET(route, func(c *gin.Context) {
+		c.File(file)
+	})
+}
+
+func (router *engine) serveFile1(route string) {
+	router.GET(route, func(c *gin.Context) {
+		// skip the /
+		c.File(route[1:])
+	})
+}
+
 func main() {
 	flag.Parse()
 
@@ -214,9 +231,20 @@ func main() {
 	router := gin.Default()
 	router.POST("/jobs", getJobsHandler(dbpool))
 	// Serve HTML page to trigger connection
-	router.GET("/", func(c *gin.Context) {
-		c.File("index.html")
-	})
+
+	//router.GET("/", func(c *gin.Context) {
+	//	c.File("index.html")
+	//})
+	eng := engine{router}
+	eng.serveFile("/", "index.html")
+	eng.serveFile1("/robots.txt")
+	eng.serveFile1("/index.js")
+	eng.serveFile1("/favicon.ico")
+	eng.serveFile1("/style.css")
+	//eng.serveFile1("/cardimg.png")
+	//eng.serveFile1("/cardimg.webp")
+	eng.serveFile("/cardimg.webp", "cardimg1024_50q_ll.webp")
+
 	// Ping handler
 	router.GET("/ping", func(c *gin.Context) {
 		c.String(http.StatusOK, "pong")
