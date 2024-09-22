@@ -37,6 +37,21 @@ CREATE TABLE public.jobs (
     descrip text,
     descrip_fts tsvector GENERATED ALWAYS AS (to_tsvector('english'::regconfig, descrip)) STORED,
     url text,
+    tags text[],
+    metadata jsonb DEFAULT '{}'::jsonb
+);
+
+
+--
+-- Name: jobs_bkp; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.jobs_bkp (
+    id integer,
+    title text,
+    descrip text,
+    descrip_fts tsvector,
+    url text,
     tags text[]
 );
 

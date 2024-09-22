@@ -36,8 +36,7 @@ To populate the database I downloaded the jobs from public available sources,
 I didn't used any authenticated session to download the data, the datata is not
 shared in the repository for obvious reasons anyway.
 
-To download the data I do it in 3 steps, each step receives the output of
-the previous step. All steps outputs are in JSON.
+To download the data I do it in 4 steps 
 
 1. Run the getLinks scrappers: `node scrap.mjs getLinks`. This scrapper
    outptus a list of links in JSON format. It must open the browser, get the
@@ -46,7 +45,11 @@ the previous step. All steps outputs are in JSON.
  rustjobs rust rustjobs othertag`. These scrappers get the links from the
    previous step, download the data from each link and save in the `output/.`
    folder. It outputs the files saved as a JSON string array
-3. Run the importer. ` .. output json files .. | (cd tools/; go run .)` This is
+3. Run the `metadata.ipynb` notebook to populate the metadata. This notebook
+   analyses the descriptions of the vacancies and generate metadata that is
+   saved in the database. This metadata includes the remote status for the
+   position for example. To run the notebook use `ipython3 '%run metadata.ipynb'`.
+4. Run the importer. ` .. output json files .. | (cd tools/; go run .)` This is
    not a scrapper. It reads the list of files generated in the previous step
 and load it into the database. The `new` tag is cleared for old entries, and
 new entries are inserted with the `new` tag setted.
@@ -54,9 +57,15 @@ new entries are inserted with the `new` tag setted.
 Running all steps at once:
 
 ```
-node scrap.mjs getLinks | \
-  node scrap downloadLinks | \
-  (cd tools/; go run .)
+# 1 and 2. Scrapping
+node scrap.mjs getLinks | node scrap downloadLinks
+
+# 3 annotating
+ipython3 '%run metadata.ipynb'
+
+# 4 loading
+cd tools
+DATABASE_URL=... go run . --from ../output
 ```
 
 This will scrap and insert new entries in the database, updating the

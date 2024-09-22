@@ -78,10 +78,11 @@ func main() {
 		defer jsonFile.Close()
 
 		type Jobs struct {
-			Title   string   `json:"title"`
-			Descrip string   `json:"descrip"`
-			Url     string   `json:"url"`
-			Tags    []string `json:"tags"`
+			Title    string            `json:"title"`
+			Descrip  string            `json:"descrip"`
+			Url      string            `json:"url"`
+			Tags     []string          `json:"tags"`
+			Metadata map[string]string `json:"metadata"`
 		}
 
 		bytes, err := io.ReadAll(jsonFile)
@@ -92,8 +93,8 @@ func main() {
 		var tags = append(data.Tags, "new")
 
 		conn.Exec(context.Background(),
-			"INSERT INTO jobs (title, descrip, url, tags) VALUES($1, $2, $3, $4) ON CONFLICT (url) DO NOTHING",
-			data.Title, data.Descrip, data.Url, tags)
+			"INSERT INTO jobs (title, descrip, url, tags, metadata) VALUES($1, $2, $3, $4, $5) ON CONFLICT (url) DO NOTHING",
+			data.Title, data.Descrip, data.Url, tags, data.Metadata)
 
 		fmt.Println(data.Title, "inserted")
 	}
