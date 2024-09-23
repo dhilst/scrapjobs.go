@@ -62,7 +62,7 @@ async function downloadJobsCommand() {
       outputs.push(jsonPath)
     }
 
-    await browser.close()
+    // await browser.close()
 
     console.log(JSON.stringify(outputs, null, 2));
   } catch (e) {
@@ -155,7 +155,7 @@ async function getLinksIndeed(browser) {
 async function getLinksFunctionalworks(browser) {
   //https://functional.works-hub.com/jobs/search?page=4&remote=true
   const url = (start) => `https://functional.works-hub.com/jobs/search?page=${start}&remote=true`;
-  const linksFilter = "https://functional.works-hub.com/jobs/";
+  const linksFilter = "https://functional.works-hub.com/jobs/remote-";
   // download the first 5 pages
   const links = await getLinksGeneric(url(4), linksFilter, browser);
   return links;
@@ -229,10 +229,13 @@ async function getFunctionalWorks(browser, url) {
   await page.setViewport({width: 1080, height: 1024});
   await page.goto(url);
   const title = await page.waitForSelector("h1").then(h1 => page.evaluate(e => e.textContent, h1));
-  let descrip = await page.$$eval("xpath/html/body/div[1]/div[2]/div[2]/div/div[1]/div[2]", elements => elements.map(x => x.textContent).join("\n"))
+  let descrip = await page.$$eval("xpath/html/body/div[1]/div[2]/div[2]/div/div[1]/div[2]",
+    elements => elements.map(x => x.textContent).join("\n"))
+  let remote = await page.$$eval("xpath/html/body/div[1]/div[2]/div[2]/div/div[1]/div[1]/div/div[2]/div[3]/div[1]/div",
+    elements => elements.map(x => x.textContent).join("\n").replace(/remote (within)?/i, "").trim())
 
   await page.close();
-  return {title, descrip, url, tags}
+  return {title, descrip, url, tags, metadata: { remote }}
 }
 
 async function getJooble(browser, url) {

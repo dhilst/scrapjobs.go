@@ -51,6 +51,7 @@ func main() {
 
 	// Remove the *new* tag from the jobs in the database
 	if *replaceTagsFlag {
+		log.Printf("Removing \"new\" tags\n")
 		_, err = conn.Exec(context.Background(), "update jobs set tags = array_remove(tags, 'new')")
 	}
 

@@ -43,19 +43,6 @@ CREATE TABLE public.jobs (
 
 
 --
--- Name: jobs_bkp; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.jobs_bkp (
-    id integer,
-    title text,
-    descrip text,
-    descrip_fts tsvector,
-    url text,
-    tags text[]
-);
-
-
 --
 -- Name: jobs_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
