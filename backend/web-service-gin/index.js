@@ -100,8 +100,8 @@ function getTags(url) {
   return JSON.parse(localStorage.getItem(url) || '[]')
 }
 
-const tag = async (tag) => {
-  const color = await pickColor(tag);
+async function tag(tag, color) {
+  color ||= await pickColor(tag);
   const style = (function(){
     switch (tag) {
       case "new":
@@ -129,16 +129,20 @@ socket.onmessage = async function(event) {
     return;
   };
   console.assert(Array.isArray(results));
-  // Title Tags Url Rank Headline 
+  // results fields: Title Tags Url Rank Headline Metadata
   const lis = await Promise.all(results.map(async result => {
-    const resultLocalTags = await Promise.all(getTags(result.Url).map(tag)).then(strings => strings.join(""));
-    const resultTags = await Promise.all(result.Tags.map(tag)).then(strings => strings.join(""));
+    const resultLocalTags = await Promise.all(getTags(result.Url).map(t => tag(t))).then(strings => strings.join(""));
+    const resultTags = await Promise.all(result.Tags.map(t => tag(t))).then(strings => strings.join(""));
+    const metadataTags = await Promise.all(
+      Object.entries(result.Metadata).map(([k, v]) => pickColor(k).then(clr => tag(`${k}: ${v}`, clr))))
+      .then(strings => strings.join(""));
     return `<li>
 <h2>
 <a href="${result.Url}" target="_blank" class="kanit-extrabold">${result.Title}</a>
 </h2>
 <span class="tags">
 ${resultTags}
+${metadataTags}
 ${resultLocalTags}
 </span>
 <input class="cmd-input" placeholder=">"/>

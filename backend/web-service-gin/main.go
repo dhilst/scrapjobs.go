@@ -62,6 +62,7 @@ type SearchResult struct {
 	Url      string
 	Rank     float32
 	Headline string
+	Metadata map[string]string
 }
 
 func SearchJobs(conn *pgxpool.Pool, terms []string, tags []string) (*[]SearchResult, error) {
@@ -83,11 +84,12 @@ func SearchJobs(conn *pgxpool.Pool, terms []string, tags []string) (*[]SearchRes
 			  tags,
 			  url,
 			  1 as rank,
-			  '' as headline
+			  '' as headline,
+			  metadata
 			from jobs,
 			  websearch_to_tsquery('english', $1) query
 			where $2 <@ tags
-			order by rank desc
+			order by metadata->'remote', rank desc
 			limit 100
 			`,
 			strings.Join(terms, " "),
@@ -102,12 +104,13 @@ func SearchJobs(conn *pgxpool.Pool, terms []string, tags []string) (*[]SearchRes
 			  tags,
 			  url,
 			  ts_rank_cd(descrip_fts, query) as rank,
-			  ts_headline('english', descrip, query)
+			  ts_headline('english', descrip, query) as headline,
+  			  metadata
 			from jobs,
 			  websearch_to_tsquery('english', $1) query
 			where descrip_fts @@ query
 			  and ts_rank_cd(descrip_fts, query) > 0.001
-			order by rank desc
+			order by metadata->'remote', rank desc
 			limit 100
 			`,
 			strings.Join(terms, " "),
@@ -121,13 +124,14 @@ func SearchJobs(conn *pgxpool.Pool, terms []string, tags []string) (*[]SearchRes
 			  tags,
 			  url,
 			  ts_rank_cd(descrip_fts, query) as rank,
-			  ts_headline('english', descrip, query)
+			  ts_headline('english', descrip, query),
+			  metadata
 			from jobs,
 			  websearch_to_tsquery('english', $1) query
 			where descrip_fts @@ query
 			  and ts_rank_cd(descrip_fts, query) > 0.001
 			  and $2 <@ tags
-			order by rank desc
+			order by metadata->'remote', rank desc
 			limit 100
 			`,
 			strings.Join(terms, " "),
@@ -152,6 +156,7 @@ func SearchJobs(conn *pgxpool.Pool, terms []string, tags []string) (*[]SearchRes
 			&result.Url,
 			&result.Rank,
 			&result.Headline,
+			&result.Metadata,
 		)
 		results = append(results, result)
 	}

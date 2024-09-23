@@ -1,116 +1,115 @@
 .kanit-light-italic {
-	font-family: "kanit", sans-serif;
-	font-weight: 300;
-	font-style: italic;
+  font-family: "kanit", sans-serif;
+  font-weight: 300;
+  font-style: italic;
 }
 
 .kanit-extrabold {
-	font-family: "Kanit", sans-serif;
-	font-weight: 800;
-	font-style: normal;
+  font-family: "Kanit", sans-serif;
+  font-weight: 800;
+  font-style: normal;
 }
 
 .kanit-thin-italic {
-	font-family: "Kanit", sans-serif;
-	font-weight: 200;
-	font-style: italic;
+  font-family: "Kanit", sans-serif;
+  font-weight: 200;
+  font-style: italic;
 }
 
 .jacques-francois-shadow-regular {
-	font-family: "Jacques Francois Shadow", serif;
-	font-weight: 400;
-	font-style: normal;
+  font-family: "Jacques Francois Shadow", serif;
+  font-weight: 400;
+  font-style: normal;
 }
 
 .title {
-	color: #00dd00;
-	text-align: center;
-	text-shadow: 0px 3px 8px #ff00ff;
-	margin-bottom: 0;
-	font-size: calc(24px * 3);
+  color: #00dd00;
+  text-align: center;
+  text-shadow: 0px 3px 8px #ff00ff;
+  margin-bottom: 0;
+  font-size: calc(24px * 3);
 }
 
 .subtitle {
-	margin-top: 0;
-	text-align: center;
-	color: #eee;
-	text-align: center;
-	font-size: 24px;
-	font-weight: 100;
-	font-style: italic;
+  margin-top: 0;
+  text-align: center;
+  color: #eee;
+  text-align: center;
+  font-size: 24px;
+  font-weight: 100;
+  font-style: italic;
 }
 
 form {
-	display: flex;
-	justify-content: center;
+  display: flex;
+  justify-content: center;
 }
 
 .search {
-	width: 80%;
-	background-color: transparent;
-	border: 0;
-	border-bottom: 1px solid #00cc00;
-	color: white;
-	padding: 5px;
-	font-family: "kanit", sans-serif;
-	font-weight: 300;
-	font-style: italic;
-	font-size: 1.6em;
+  width: 80%;
+  background-color: transparent;
+  border: 0;
+  border-bottom: 1px solid #00cc00;
+  color: white;
+  padding: 5px;
+  font-family: "kanit", sans-serif;
+  font-weight: 300;
+  font-style: italic;
+  font-size: 1.6em;
 }
 
 .tag {
-	border-radius: 4px;
-	color: #000;
-	background-color: #ddd4ed;
-	padding: 3px 11px;
-	margin: 3px;
-	display: inline-block;
+  border-radius: 4px;
+  color: #000;
+  background-color: #ddd4ed;
+  padding: 3px 11px;
+  margin: 3px;
+  display: inline-block;
 }
 
 .cmd-input {
-	max-width: 50px;
-	background-color: transparent;
-	border: 0;
-	border-bottom: 1px solid #00cc00;
-	color: white
+  max-width: 50px;
+  background-color: transparent;
+  border: 0;
+  border-bottom: 1px solid #00cc00;
+  color: white
 }
 
 input:focus {
-	outline: none;
+  outline: none;
 }
 
 .cmd-input::placeholder {
-	color: #00cc00;
+  color: #00cc00;
 }
 
 a {
-	color: #fff;
-	//text-shadow: 0px 2px 8px #00cc00;
+  color: #fff;
 }
 
 a:visited {
-	color: #544454;
+  color: #544454;
 }
 
 h1 {
-	font-size: 48px;
+  font-size: 48px;
 } 
 
 li {
-	margin-bottom: 1em;
+  margin-bottom: 1em;
 }
 
 body {
-	background-color: #111;
-	color: white;
-	font-family: "kanit", sans-serif;
-	font-weight: 300;
-	font-size: 1.2em;
+  background-color: #111;
+  color: white;
+  font-family: "kanit", sans-serif;
+  font-weight: 300;
+  font-size: 1.2em;
 }
 
 #output b {
-	font-family: "kanit", sans-serif;
-	font-weight: 500;
-	font-style: italic;
-	text-shadow: 0px 2px 6px #ff00ff;
+  font-family: "kanit", sans-serif;
+  font-weight: 500;
+  font-style: italic;
+  text-shadow: 0px 2px 6px #ff00ff;
 }

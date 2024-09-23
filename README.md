@@ -51,14 +51,17 @@ To download the data I do it in 4 steps
    position for example. To run the notebook use `ipython3 '%run metadata.ipynb'`.
 4. Run the importer. ` .. output json files .. | (cd tools/; go run .)` This is
    not a scrapper. It reads the list of files generated in the previous step
-and load it into the database. The `new` tag is cleared for old entries, and
-new entries are inserted with the `new` tag setted.
+   and load it into the database. The `new` tag is cleared for old entries, and
+   new entries are inserted with the `new` tag setted.
 
-Running all steps at once:
+Running all the steps:
 
 ```
 # 1 and 2. Scrapping
 node scrap.mjs getLinks | node scrap downloadLinks
+# or 
+node scrap.mjs getLinks > links.json
+node scrap downloadLinks < links.json
 
 # 3 annotating
 ipython3 '%run metadata.ipynb'
@@ -91,5 +94,3 @@ The database schema is in `db.sql` for now, you need it in order to create the d
 
 * Improve the first-time setup 
 * Deploy automation
-* Name registration
-* HTTPS

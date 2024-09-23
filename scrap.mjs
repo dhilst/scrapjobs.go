@@ -94,11 +94,11 @@ async function getLinksCommand() {
       "functionalworkds": getLinksFunctionalworks,
     };
 
-    links = await Promise.all(
+    links = await Promise.allSettled(
         Object.values(commands)
             .map(scrapper => scrapper(browser))
       )
-      .then(linksNested => linksNested.flat().dedup());
+      .then(linksNested => linksNested.map(p => p.status === "fulfilled" ? p.value : null).filter(Boolean).flat().dedup());
 
     break;
   default:
