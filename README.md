@@ -57,18 +57,17 @@ To download the data I do it in 4 steps
 Running all the steps:
 
 ```
-# 1 and 2. Scrapping
-node scrap.mjs getLinks | node scrap downloadLinks
-# or 
+# 1. Get the links
 node scrap.mjs getLinks > links.json
-node scrap downloadLinks < links.json
 
-# 3 annotating
-ipython3 '%run metadata.ipynb'
+# 2. Get the jobs
+node scrap.mjs downloadJobs < links.json > jobs.json
 
-# 4 loading
-cd tools
-DATABASE_URL=... go run . --from ../output
+# 3. Enrich the metadata
+.venv/bin/python3 metadata.py < jobs.json > jsonAnnotated.json
+
+# 4. Load in the DB
+tools/tools < jsonAnnotated.json
 ```
 
 This will scrap and insert new entries in the database, updating the

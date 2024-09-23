@@ -52,19 +52,11 @@ async function downloadJobsCommand() {
     }
     // Remove nulls from the failed scrappers
     results = results.filter(x => x !== null)
-    let outputs = [];
 
-    for (let result of results) {
-      let {title, descrip, url} = result;
-      title = title.replaceAll(/[ \/]/g, "_");
-      const jsonPath = path.resolve(`./output/${title}.json`);
-      await fs.writeFile(jsonPath, JSON.stringify(result, null, 2));
-      outputs.push(jsonPath)
-    }
+    // Output all the results as a big JSON
+    console.log(JSON.stringify(results, null, 2));
 
-    // await browser.close()
-
-    console.log(JSON.stringify(outputs, null, 2));
+    await browser.close();
   } catch (e) {
     console.error("ERROR", e)
   }
@@ -85,6 +77,9 @@ async function getLinksCommand() {
     break;
   case "functionalworks":
     links = await getLinksFunctionalworks(browser);
+    break;
+  case "web3career":
+    links = await getLinksWeb3Career(browser);
     break;
   case undefined:
     const commands = {
@@ -161,6 +156,17 @@ async function getLinksFunctionalworks(browser) {
   return links;
 }
 
+async function getLinksWeb3Career(browser) {
+  const url = "https://web3.career/remote-jobs";
+  const page = await browser.newPage();
+  await page.setViewport({width: 1080, height: 1024});
+  await page.goto(url, { waitUntil: "networkidle0" });
+  let links = await page.$$eval("a[data-jobid]", as =>
+    as.map(a => a.href));
+  links = links.filter(link => /https:\/\/web3.career\/[^\/]+\/\d+$/.test(link)).dedup()
+  return links;
+}
+
 async function getData(browser, url) {
   if (url.includes("rustjobs"))
     return getRustjobs(browser, url);
@@ -172,6 +178,8 @@ async function getData(browser, url) {
     return getFunctionalWorks(browser, url);
   else if (url.includes("jooble"))
     return getJooble(browser, url);
+  else if (url.includes("web3.career"))
+    return getWeb3Career(browser, url);
 
   console.error(`Don't know how to scrap ${linksFile}`)
 }
@@ -211,7 +219,15 @@ async function getIndeed(browser, url) {
   const page = await browser.newPage();
   await page.setViewport({width: 1080, height: 1024});
   await page.goto(url);
-  const title = await page.waitForSelector(".jobsearch-JobInfoHeader-title").then(h1 => page.evaluate(e => e.textContent, h1));
+
+  let title = await page.waitForSelector("h1").then(h1 => page.evaluate(e => e.textContent, h1));
+  if (title === "Additional Verification Required") {
+    await page.close();
+    throw Error("skipping captcha")
+  }
+  // Get the right class
+  title = await page.waitForSelector(".jobsearch-JobInfoHeader-title")
+    .then(h1 => page.evaluate(e => e.textContent, h1));
   let descrip = await page.$$eval("#jobDescriptionText p", elements => elements.map(x => x.textContent).join("\n"))
 
   if (!descrip) {
@@ -249,4 +265,22 @@ async function getJooble(browser, url) {
 
   await page.close();
   return {title, descrip, url, tags}
+}
+
+async function getWeb3Career(browser, url) {
+  const tags = ["web3career"];
+  const page = await browser.newPage();
+  await page.setViewport({width: 1080, height: 1024});
+  await page.goto(url, { waitUntil: "networkidle0" });
+  const title = await page.$eval("h1", h1 => h1.textContent.trim());
+  const descrip = await page.$eval("#job", job => job.textContent.trim());
+  const location = await page.$eval("html.h-100 body.d-flex.flex-column.h-100 main.flex-shrink-0 div.mx-auto.px-md-3.mt-1.mt-md-4 turbo-frame#job div.p-2.p-md-0.main-border-sides-job div.row.gap-.px-1.px-md-5.py-1.py-md-5 div.col-12.col-md-4.my-4.my-md-0 div.border.border-primary.p-3.text-center.mysticky div div.mt-3 p", p => p.textContent.trim().replace("Location: ", ""));
+  let metadata = {};
+  if (location.startsWith("Remote")) {
+    metadata["remote"] = location.replace("Remote", "").trim() || "worldwide";
+  } else {
+    metadata["remote"] = location;
+  }
+  await page.close();
+  return {title, descrip, url, tags, metadata};
 }

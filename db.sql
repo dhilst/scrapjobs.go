@@ -16,13 +16,6 @@ SET xmloption = content;
 SET client_min_messages = warning;
 SET row_security = off;
 
---
--- Name: public; Type: SCHEMA; Schema: -; Owner: -
---
-
--- *not* creating schema, since initdb creates it
-
-
 SET default_tablespace = '';
 
 SET default_table_access_method = heap;
@@ -38,11 +31,11 @@ CREATE TABLE public.jobs (
     descrip_fts tsvector GENERATED ALWAYS AS (to_tsvector('english'::regconfig, descrip)) STORED,
     url text,
     tags text[],
-    metadata jsonb DEFAULT '{}'::jsonb
+    metadata jsonb DEFAULT '{}'::jsonb,
+    created_at timestamp without time zone DEFAULT timezone('utc'::text, now())
 );
 
 
---
 --
 -- Name: jobs_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
@@ -83,14 +76,6 @@ ALTER TABLE ONLY public.jobs
 --
 
 CREATE INDEX descrip_fts_idx ON public.jobs USING gin (descrip_fts);
-
-
---
--- Name: SCHEMA public; Type: ACL; Schema: -; Owner: -
---
-
-REVOKE USAGE ON SCHEMA public FROM PUBLIC;
-GRANT ALL ON SCHEMA public TO PUBLIC;
 
 
 --

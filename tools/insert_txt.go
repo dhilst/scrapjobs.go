@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"context"
 	"encoding/json"
 	"flag"
@@ -21,7 +20,7 @@ var DATABASE_URL string = orDefault(
 // var nFlag *int = flag.Int("n", 1234, "help message for flag n")
 
 var fromFlag *string = flag.String("from", "", "Insert from this folder")
-var replaceTagsFlag *bool = flag.Bool("replace-tags", true, "Delete 'new' tags before inserting")
+var truncateFlag *bool = flag.Bool("truncate-table", false, "Truncate the table before inserting the new data")
 
 func orDefault(s, def string) string {
 	if s == "" {
@@ -29,6 +28,52 @@ func orDefault(s, def string) string {
 	}
 
 	return s
+}
+
+type Jobs struct {
+	Title    string            `json:"title"`
+	Descrip  string            `json:"descrip"`
+	Url      string            `json:"url"`
+	Tags     []string          `json:"tags"`
+	Metadata map[string]string `json:"metadata"`
+}
+
+func readJobs() *[]Jobs {
+	var err error
+	var jsonFiles []string
+	var jobs []Jobs
+
+	if *fromFlag != "" {
+		jsonFiles, err = filepath.Glob(fmt.Sprintf("%s/*.json", *fromFlag))
+		if err != nil {
+			panic(err)
+		}
+		jobs = make([]Jobs, len(jsonFiles))
+	} else {
+		// Read json from stdin
+		bytes, err := io.ReadAll(os.Stdin)
+		if err != nil {
+			panic(err)
+		}
+		if err := json.Unmarshal(bytes, &jobs); err != nil {
+			panic(err)
+		}
+	}
+
+	for i, val := range jsonFiles {
+		jsonFile, err := os.Open(val)
+		if err != nil {
+			log.Printf("JSON file error: %s: '%s'\n", err, val)
+			continue
+		}
+		defer jsonFile.Close()
+		bytes, err := io.ReadAll(jsonFile)
+		if err := json.Unmarshal(bytes, &jobs[i]); err != nil {
+			panic(err)
+		}
+	}
+
+	return &jobs
 }
 
 func main() {
@@ -49,52 +94,25 @@ func main() {
 	fmt.Printf("Version: %s\n", version)
 	defer conn.Close(context.Background())
 
-	// Remove the *new* tag from the jobs in the database
-	if *replaceTagsFlag {
-		log.Printf("Removing \"new\" tags\n")
-		_, err = conn.Exec(context.Background(), "update jobs set tags = array_remove(tags, 'new')")
+	// Truncate the table
+	if *truncateFlag {
+		log.Printf("Truncating the table")
+		_, err = conn.Exec(context.Background(), "truncate table jobs")
 	}
 
-	var jsonFiles []string
-	if *fromFlag != "" {
-		jsonFiles, err = filepath.Glob(fmt.Sprintf("%s/*.json", *fromFlag))
-		if err != nil {
-			panic(err)
-		}
-	} else {
-		reader := bufio.NewReader(os.Stdin)
-		bytes, err := io.ReadAll(reader)
-		if err != nil {
-			panic(err)
-		}
-		json.Unmarshal(bytes, &jsonFiles)
-	}
-
-	for _, val := range jsonFiles {
-		jsonFile, err := os.Open(val)
-		if err != nil {
-			log.Printf("JSON file error: %s: '%s'\n", err, val)
-			continue
-		}
-		defer jsonFile.Close()
-
-		type Jobs struct {
-			Title    string            `json:"title"`
-			Descrip  string            `json:"descrip"`
-			Url      string            `json:"url"`
-			Tags     []string          `json:"tags"`
-			Metadata map[string]string `json:"metadata"`
-		}
-
-		bytes, err := io.ReadAll(jsonFile)
-		var data Jobs
-		json.Unmarshal(bytes, &data)
-
+	for _, data := range *readJobs() {
 		// Append the *new* tag for the new imported data
 		var tags = append(data.Tags, "new")
 
 		conn.Exec(context.Background(),
-			"INSERT INTO jobs (title, descrip, url, tags, metadata) VALUES($1, $2, $3, $4, $5) ON CONFLICT (url) DO NOTHING",
+			`INSERT INTO jobs (title, descrip, url, tags, metadata)
+ 			VALUES($1, $2, $3, $4, $5)
+			ON CONFLICT (url) DO UPDATE
+			SET title = $1,
+				descrip = $2,
+				tags = $4,
+			    metadata = $5
+			`,
 			data.Title, data.Descrip, data.Url, tags, data.Metadata)
 
 		fmt.Println(data.Title, "inserted")
