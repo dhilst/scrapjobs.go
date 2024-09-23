@@ -16,6 +16,22 @@ SET xmloption = content;
 SET client_min_messages = warning;
 SET row_security = off;
 
+--
+-- Name: public; Type: SCHEMA; Schema: -; Owner: -
+--
+
+-- *not* creating schema, since initdb creates it
+
+
+--
+-- Name: remote_rank(text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.remote_rank(text) RETURNS integer
+    LANGUAGE sql
+    AS $_$ select case when $1 in ('worldwide', 'global') then 1000 else array_length(string_to_array($1, ','), 1) end $_$;
+
+
 SET default_tablespace = '';
 
 SET default_table_access_method = heap;
@@ -76,6 +92,14 @@ ALTER TABLE ONLY public.jobs
 --
 
 CREATE INDEX descrip_fts_idx ON public.jobs USING gin (descrip_fts);
+
+
+--
+-- Name: SCHEMA public; Type: ACL; Schema: -; Owner: -
+--
+
+REVOKE USAGE ON SCHEMA public FROM PUBLIC;
+GRANT ALL ON SCHEMA public TO PUBLIC;
 
 
 --

@@ -89,7 +89,7 @@ func SearchJobs(conn *pgxpool.Pool, terms []string, tags []string) (*[]SearchRes
 			from jobs,
 			  websearch_to_tsquery('english', $1) query
 			where $2 <@ tags
-			order by metadata->'remote', rank desc
+			order by remote_rank(metadata->>'remote') desc nulls last, rank desc
 			limit 100
 			`,
 			strings.Join(terms, " "),
@@ -110,7 +110,7 @@ func SearchJobs(conn *pgxpool.Pool, terms []string, tags []string) (*[]SearchRes
 			  websearch_to_tsquery('english', $1) query
 			where descrip_fts @@ query
 			  and ts_rank_cd(descrip_fts, query) > 0.001
-			order by metadata->'remote', rank desc
+			order by remote_rank(metadata->>'remote') desc nulls last, rank desc
 			limit 100
 			`,
 			strings.Join(terms, " "),
@@ -131,7 +131,7 @@ func SearchJobs(conn *pgxpool.Pool, terms []string, tags []string) (*[]SearchRes
 			where descrip_fts @@ query
 			  and ts_rank_cd(descrip_fts, query) > 0.001
 			  and $2 <@ tags
-			order by metadata->'remote', rank desc
+			order by remote_rank(metadata->>'remote') desc nulls last, rank desc
 			limit 100
 			`,
 			strings.Join(terms, " "),
