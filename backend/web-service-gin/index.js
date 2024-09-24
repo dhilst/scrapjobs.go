@@ -21,8 +21,10 @@ const colors = [
   "#ADFF2F", "#FFF0F5",
 ];
 
+
 const specialTags = {
-  "new": "#33FF57"
+  "new": "#33FF57",
+  "remote": "#aaf",
 };
 
 
@@ -58,7 +60,8 @@ if (window.crypto?.subtle) {
 }
 
 async function pickColor(tag) {
-  if (tag in specialTags) {
+  console.log(`Picking a color for ${tag}`)
+  if (specialTags.hasOwnProperty(tag)) {
     return specialTags[tag];
   }
   const idx = await hashStringToNumber(tag).then(n => n % colors.length);
