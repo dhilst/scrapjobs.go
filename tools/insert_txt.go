@@ -21,6 +21,8 @@ var DATABASE_URL string = orDefault(
 
 var fromFlag *string = flag.String("from", "", "Insert from this folder")
 var truncateFlag *bool = flag.Bool("truncate-table", false, "Truncate the table before inserting the new data")
+var updateNewFlag *bool = flag.Bool("update-tags", false, "Delete \"new\" tag from existing entries before adding the new entries")
+var dryRunFlag *bool = flag.Bool("dry-run", true, "Do not do anything, print what whould be done instead")
 
 func orDefault(s, def string) string {
 	if s == "" {
@@ -51,6 +53,7 @@ func readJobs() *[]Jobs {
 		jobs = make([]Jobs, len(jsonFiles))
 	} else {
 		// Read json from stdin
+		log.Printf("Reading JSON jobs from the stdin\n")
 		bytes, err := io.ReadAll(os.Stdin)
 		if err != nil {
 			panic(err)
@@ -79,11 +82,11 @@ func readJobs() *[]Jobs {
 func main() {
 	flag.Parse()
 
+	log.Printf("Connecting to the db\n")
 	conn, err := pgx.Connect(context.Background(), DATABASE_URL)
 	if err != nil {
 		panic(err)
 	}
-	log.Printf("Connected!!!\n")
 
 	var version string
 	err = conn.QueryRow(context.Background(),
@@ -91,31 +94,53 @@ func main() {
 	if err != nil {
 		log.Fatalf("QueryRow failed: %v\n", err)
 	}
-	fmt.Printf("Version: %s\n", version)
+	log.Printf("Version: %s\n", version)
 	defer conn.Close(context.Background())
 
 	// Truncate the table
 	if *truncateFlag {
 		log.Printf("Truncating the table")
-		_, err = conn.Exec(context.Background(), "truncate table jobs")
+		if !*dryRunFlag {
+			if _, err = conn.Exec(context.Background(), "truncate table jobs"); err != nil {
+				log.Panic(err)
+			}
+		} else {
+			log.Printf("Wound truncate the jobs table")
+		}
+	}
+
+	if *updateNewFlag {
+		log.Printf("Updating \"new\" tags")
+		qry := "update jobs set tags = array_remove(tags, 'new')"
+		if !*dryRunFlag {
+			if _, err = conn.Exec(context.Background(), qry); err != nil {
+				log.Panic(err)
+			}
+		} else {
+			log.Printf("Wound update the tags: %s", qry)
+		}
 	}
 
 	for _, data := range *readJobs() {
 		// Append the *new* tag for the new imported data
 		var tags = append(data.Tags, "new")
 
-		conn.Exec(context.Background(),
-			`INSERT INTO jobs (title, descrip, url, tags, metadata)
- 			VALUES($1, $2, $3, $4, $5)
-			ON CONFLICT (url) DO UPDATE
-			SET title = $1,
+		if !*dryRunFlag {
+			conn.Exec(context.Background(),
+				`INSERT INTO jobs (title, descrip, url, tags, metadata)
+				VALUES($1, $2, $3, $4, $5)
+				ON CONFLICT (url) DO UPDATE
+				SET title = $1,
 				descrip = $2,
-				tags = $4,
-			    metadata = $5
-			`,
-			data.Title, data.Descrip, data.Url, tags, data.Metadata)
+				tags = array_remove($4, 'new'),
+				metadata = $5
+				`,
+				data.Title, data.Descrip, data.Url, tags, data.Metadata)
 
-		fmt.Println(data.Title, "inserted")
+			fmt.Println(data.Title, "inserted")
+		} else {
+			log.Printf("Wound insert or update the job: %s", data.Title)
+		}
 	}
 
 	os.Exit(0)
