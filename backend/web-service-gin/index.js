@@ -182,6 +182,7 @@ ${resultLocalTags}
   setTimeout(() => element.style.display = 'block', 50);
 }
 
+// Execute func first then delay
 function throttle(delay, func) {
   let timeout = null;
 
@@ -193,8 +194,23 @@ function throttle(delay, func) {
   };
 }
 
+// Delay first, then execute the func
+function delay(d, func) {
+  let timeout = null;
+
+  return (...args) => {
+    if (timeout !== null) {
+      clearTimeout(timeout);
+    }
+    timeout = setTimeout(() => {
+      func(...args);
+      timeout = null
+    }, d);
+  }
+}
+
 let lastQuery = null;
-const sendKeyPress = throttle(100, Query => {
+const sendKeyPress = delay(200, Query => {
   // This happens when we move the cursor in the input
   // we do not want to send the same input again to the server
   if (Query === lastQuery) {
