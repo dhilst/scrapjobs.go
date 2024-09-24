@@ -255,6 +255,7 @@ func main() {
 		c.String(http.StatusOK, "pong")
 	})
 
+	wsConnections := 0
 	router.GET("/ws/server", func(c *gin.Context) {
 		client, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 		if err != nil {
@@ -263,6 +264,14 @@ func main() {
 			c.AbortWithError(http.StatusInternalServerError, err)
 			return
 		}
+		wsConnections++
+		client.SetCloseHandler(func(code int, text string) error {
+			log.Printf("Client disconnecting #%d %d %s\n", wsConnections, code, text)
+			wsConnections--
+			client.Close() // force close to release the TCP port
+			return nil
+		})
+		log.Printf("Connected #%d %s\n", wsConnections, client.RemoteAddr())
 
 		for {
 			// Read message from client
@@ -271,6 +280,7 @@ func main() {
 			if err != nil {
 				log.Printf("%s error while reading websocket message\n", err.Error())
 				c.AbortWithError(http.StatusInternalServerError, err)
+				break
 			}
 
 			var terms []string
