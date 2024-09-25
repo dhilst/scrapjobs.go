@@ -117,12 +117,21 @@ async function tag(tag, color) {
 };
 
 
+const input = document.querySelector("input")
+console.assert(input)
+
+let loadingAnimation = setInterval(() =>
+  input.placeholder += ".", 1000);
+
 let secure = window.location.protocol.includes('https') ? 's':'';
 var socket = new WebSocket("ws"+secure+"://" +
   window.location.host + "/ws/server");
 
 socket.onopen = function(event) {
   console.log("WebSocket connected!");
+  clearInterval(loadingAnimation);
+  loadingAnimation = null;
+  input.placeholder = "Search for a job ..."
 }
 
 socket.onmessage = async function(event) {
