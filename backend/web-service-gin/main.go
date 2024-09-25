@@ -283,9 +283,10 @@ func main() {
 				break
 			}
 
-			var terms []string
-			var tags []string
-			for _, token := range strings.Fields(v.Query) {
+			fields := strings.Fields(v.Query)
+			terms := make([]string, 0, len(fields))
+			tags := make([]string, 0, len(fields))
+			for _, token := range fields {
 				if strings.HasPrefix(token, "#") {
 					tags = append(tags, token[1:])
 				} else {
